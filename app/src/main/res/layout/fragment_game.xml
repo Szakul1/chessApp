@@ -5,5 +5,11 @@
     android:layout_height="match_parent"
     tools:context=".gui.GameFragment">
 
+    <com.example.chessapp.game.Board
+        android:layout_margin="10sp"
+        android:layout_gravity="center"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        />
 
 </FrameLayout>
