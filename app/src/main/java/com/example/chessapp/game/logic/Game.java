@@ -36,6 +36,13 @@ public class Game {
         chessBoard[row][col] = ' ';
     }
 
+    private void undoMove(int row, int col, int newRow, int newCol) {
+        // TODO promotion
+        Log.d("test", "move");
+        chessBoard[row][col] = chessBoard[newRow][newCol];
+        chessBoard[newRow][newCol] = ' ';
+    }
+
     public String possibleMoves() {
         StringBuilder list = new StringBuilder();
         for (int i = 0; i < 64; i++) {
@@ -233,8 +240,8 @@ public class Game {
                     checkRow = kingPosWhite / 8 + temp * i;
                     chekCol = kingPosWhite % 8 + temp * j;
                 }
-                if (checkBounds(checkRow, chekCol) && 'b' == chessBoard[checkRow][chekCol] ||
-                        'q' == chessBoard[checkRow][chekCol]) {
+                if (checkBounds(checkRow, chekCol) && ('b' == chessBoard[checkRow][chekCol] ||
+                        'q' == chessBoard[checkRow][chekCol])) {
                     return false;
                 }
                 temp = 1;
@@ -249,8 +256,8 @@ public class Game {
                 checkRow = kingPosWhite / 8 + temp;
                 chekCol = kingPosWhite % 8 + temp * i;
             }
-            if (checkBounds(checkRow, chekCol) && 'r' == chessBoard[checkRow][chekCol] ||
-                    'q' == chessBoard[checkRow][chekCol]) {
+            if (checkBounds(checkRow, chekCol) && ('r' == chessBoard[checkRow][chekCol] ||
+                    'q' == chessBoard[checkRow][chekCol])) {
                 return false;
             }
             temp = 1;
@@ -262,8 +269,8 @@ public class Game {
                 checkRow = kingPosWhite / 8 + temp * i;
                 chekCol = kingPosWhite % 8 + temp;
             }
-            if (checkBounds(checkRow, chekCol) && 'r' == chessBoard[checkRow][chekCol] ||
-                    'q' == chessBoard[checkRow][chekCol]) {
+            if (checkBounds(checkRow, chekCol) && ('r' == chessBoard[checkRow][chekCol] ||
+                    'q' == chessBoard[checkRow][chekCol])) {
                 return false;
             }
             temp = 1;
@@ -286,17 +293,21 @@ public class Game {
 
         if (kingPosWhite >= 16) {
             // pawn
-            if ('p' == chessBoard[kingPosWhite / 8 - 1][kingPosWhite % 8 - 1] ||
-                    'p' == chessBoard[kingPosWhite / 8 + 1][kingPosWhite % 8 + 1]) {
+            int checkRow = kingPosWhite / 8 - 1, checkCol = kingPosWhite % 8 - 1;
+            if (checkBounds(checkRow, checkCol) && 'p' == chessBoard[checkRow][checkCol])
                 return false;
-            }
+            checkRow = kingPosWhite / 8 + 1;
+            checkCol = kingPosWhite % 8 + 1;
+            if (checkBounds(checkRow, checkCol) && 'p' == chessBoard[checkRow][checkCol])
+                return false;
             // king
             for (int i = -1; i <= 1; i++) {
                 for (int j = -1; j <= 1; j++) {
                     if (i == 0 && j == 0)
                         continue;
-                    int checkRow = kingPosWhite / 8 + i, chekCol = kingPosWhite % 8 + j;
-                    if (checkBounds(checkRow, chekCol) && 'a' == chessBoard[checkRow][chekCol]) {
+                    checkRow = kingPosWhite / 8 + i;
+                    checkCol = kingPosWhite % 8 + j;
+                    if (checkBounds(checkRow, checkCol) && 'a' == chessBoard[checkRow][checkCol]) {
                         return false;
                     }
                 }
