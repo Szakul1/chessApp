@@ -15,7 +15,7 @@ public class Game {
             {'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'},
             {'R', 'K', 'B', 'Q', 'A', 'B', 'K', 'R'}};
 
-    private static int kingPosWhite, kingPosBlack;
+    private static int kingPosWhite = 60, kingPosBlack = 4;
 
     public boolean checkMove(String move) {
         Log.d("test", possibleMoves() + "move:" + move);
@@ -69,7 +69,43 @@ public class Game {
 
     public String possibleP(int position) {
         StringBuilder list = new StringBuilder();
+        int row = position / 8, col = position % 8;
+        for (int i = -1; i <= 1; i += 2) { // capture and promotion
+            int checkRow = row - 1, checkCol = col + i;
+            if (checkBounds(checkRow, checkCol) &&
+                    Character.isLowerCase(chessBoard[row - 1][col + i]))
+                if (position >= 16) { // No promotion
+                    checkSafety(row, col, checkRow, checkCol, list, 'P');
+                } else { // promotion
+                    checkPromotion(row, col, checkRow, checkCol, list);
+                }
+        }
+        if (' ' == chessBoard[row - 1][col]) {
+            if (position >= 16) { // move one up
+                checkSafety(row, col, row - 1, col, list, 'P');
+            } else { // promotion and no capture
+                checkPromotion(row, col, row - 1, col, list);
+            }
+            if (position >= 48 && ' ' == chessBoard[row - 2][col]) { // move two up
+                checkSafety(row, col, row - 2, col, list, 'P');
+            }
+        }
         return list.toString();
+    }
+
+    public void checkPromotion(int row, int col, int checkRow, int checkCol, StringBuilder list) {
+        Character[] promotion = {'Q', 'R', 'B', 'K'};
+        for (Character piece : promotion) {
+            char oldPiece = chessBoard[checkRow][checkCol];
+            chessBoard[row][col] = ' ';
+            chessBoard[checkRow][checkCol] = piece;
+            if (kingSafe()) {
+                list.append(col).append(checkCol).append(oldPiece)
+                        .append(piece).append('U');
+            }
+            chessBoard[row][col] = piece;
+            chessBoard[checkRow][checkCol] = oldPiece;
+        }
     }
 
     public String possibleR(int position) {
@@ -187,6 +223,85 @@ public class Game {
     }
 
     private boolean kingSafe() {
+        // bishop | queen
+        int temp = 1;
+        for (int i = -1; i <= 1; i += 2) {
+            for (int j = -1; j <= 1; j += 2) {
+                int checkRow = kingPosWhite / 8 + temp * i, chekCol = kingPosWhite % 8 + temp * j;
+                while (checkBounds(checkRow, chekCol) && ' ' == chessBoard[checkRow][chekCol]) {
+                    temp++;
+                    checkRow = kingPosWhite / 8 + temp * i;
+                    chekCol = kingPosWhite % 8 + temp * j;
+                }
+                if (checkBounds(checkRow, chekCol) && 'b' == chessBoard[checkRow][chekCol] ||
+                        'q' == chessBoard[checkRow][chekCol]) {
+                    return false;
+                }
+                temp = 1;
+            }
+        }
+        // rock | queen
+        for (int i = -1; i <= 1; i += 2) {
+            // column check
+            int checkRow = kingPosWhite / 8 + temp, chekCol = kingPosWhite % 8 + temp * i;
+            while (checkBounds(checkRow, chekCol) && ' ' == chessBoard[checkRow][chekCol]) {
+                temp++;
+                checkRow = kingPosWhite / 8 + temp;
+                chekCol = kingPosWhite % 8 + temp * i;
+            }
+            if (checkBounds(checkRow, chekCol) && 'r' == chessBoard[checkRow][chekCol] ||
+                    'q' == chessBoard[checkRow][chekCol]) {
+                return false;
+            }
+            temp = 1;
+            // row check
+            checkRow = kingPosWhite / 8 + temp * i;
+            chekCol = kingPosWhite % 8 + temp;
+            while (checkBounds(checkRow, chekCol) && ' ' == chessBoard[checkRow][chekCol]) {
+                temp++;
+                checkRow = kingPosWhite / 8 + temp * i;
+                chekCol = kingPosWhite % 8 + temp;
+            }
+            if (checkBounds(checkRow, chekCol) && 'r' == chessBoard[checkRow][chekCol] ||
+                    'q' == chessBoard[checkRow][chekCol]) {
+                return false;
+            }
+            temp = 1;
+        }
+
+        // knight
+        for (int i = -1; i <= 1; i += 2) {
+            for (int j = -1; j <= 1; j += 2) {
+                int checkRow = kingPosWhite / 8 + i, chekCol = kingPosWhite % 8 + j * 2;
+                if (checkBounds(checkRow, chekCol) && 'k' == chessBoard[checkRow][chekCol]) {
+                    return false;
+                }
+                checkRow = kingPosWhite / 8 + i * 2;
+                chekCol = kingPosWhite % 8 + j;
+                if (checkBounds(checkRow, chekCol) && 'k' == chessBoard[checkRow][chekCol]) {
+                    return false;
+                }
+            }
+        }
+
+        if (kingPosWhite >= 16) {
+            // pawn
+            if ('p' == chessBoard[kingPosWhite / 8 - 1][kingPosWhite % 8 - 1] ||
+                    'p' == chessBoard[kingPosWhite / 8 + 1][kingPosWhite % 8 + 1]) {
+                return false;
+            }
+            // king
+            for (int i = -1; i <= 1; i++) {
+                for (int j = -1; j <= 1; j++) {
+                    if (i == 0 && j == 0)
+                        continue;
+                    int checkRow = kingPosWhite / 8 + i, chekCol = kingPosWhite % 8 + j;
+                    if (checkBounds(checkRow, chekCol) && 'a' == chessBoard[checkRow][chekCol]) {
+                        return false;
+                    }
+                }
+            }
+        }
 
         return true;
     }
