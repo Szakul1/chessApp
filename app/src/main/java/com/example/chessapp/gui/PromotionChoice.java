@@ -18,14 +18,14 @@ import androidx.annotation.Nullable;
 import com.example.chessapp.R;
 import com.example.chessapp.game.Board;
 
+@SuppressLint("ViewConstructor")
 public class PromotionChoice extends View {
-
 
     private final Bitmap pieces;
     private final Rect[] piecesSource;
     private Rect[][] piecesDst;
     private int blockSize;
-    private Board board;
+    private final Board board;
 
     public PromotionChoice(Context context, Board board) {
         super(context);

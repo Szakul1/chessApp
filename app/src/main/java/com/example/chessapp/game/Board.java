@@ -244,28 +244,26 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        showDialog();
+        if (animation)
+            return false;
+        moves = new StringBuilder();
+        int newX = (int) (event.getX() / getWidth() * boardSize);
+        int newY = (int) (event.getY() / getHeight() * boardSize);
+        if (selection && game.checkMove("" + selectedY + selectedX + newY + newX)) {
+            selection = false;
+            animationX = selectedX * pieceWidth;
+            animationY = selectedY * pieceHeight;
+            animation(newY, newX);
+        } else
+            selection = game.chessBoard[newY][newX] != ' ';
+        if (selection) {
+            game.checkMoveForPiece(newY * boardSize + newX, moves);
+        }
+        selectedX = newX;
+        selectedY = newY;
+
+        repaint();
         return false;
-//        if (animation)
-//            return false;
-//        moves = new StringBuilder();
-//        int newX = (int) (event.getX() / getWidth() * boardSize);
-//        int newY = (int) (event.getY() / getHeight() * boardSize);
-//        if (selection && game.checkMove("" + selectedY + selectedX + newY + newX)) {
-//            selection = false;
-//            animationX = selectedX * pieceWidth;
-//            animationY = selectedY * pieceHeight;
-//            animation(newY, newX);
-//        } else
-//            selection = game.chessBoard[newY][newX] != ' ';
-//        if (selection) {
-//            game.checkMoveForPiece(newY * boardSize + newX, moves);
-//        }
-//        selectedX = newX;
-//        selectedY = newY;
-//
-//        repaint();
-//        return false;
     }
 
     private void showDialog() {

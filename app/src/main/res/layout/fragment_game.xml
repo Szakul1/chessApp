@@ -1,15 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:padding="10sp"
     tools:context=".gui.GameFragment">
 
-    <com.example.chessapp.game.Board
-        android:layout_margin="10sp"
-        android:layout_gravity="center"
+    <ProgressBar
+        android:scaleY="2"
+        android:id="@+id/positionBar"
+        style="@android:style/Widget.ProgressBar.Horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_above="@+id/board"
+        android:max="20"
+        android:progress="12"
+        android:progressBackgroundTint="@color/black"
+        android:progressTint="@color/white" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAlignment="center"
+        android:textColor="@color/grey"
+        android:text="test"
+        android:textSize="25sp"
+        android:layout_alignStart="@id/positionBar"
+        android:layout_alignEnd="@id/positionBar"
+        android:layout_alignBottom="@id/positionBar"
         />
 
-</FrameLayout>
+    <com.example.chessapp.game.Board
+        android:id="@+id/board"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:layout_gravity="center" />
+
+</RelativeLayout>
