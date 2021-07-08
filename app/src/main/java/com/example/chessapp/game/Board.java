@@ -1,6 +1,8 @@
 package com.example.chessapp.game;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -10,16 +12,22 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.WindowManager;
+import android.widget.LinearLayout;
+import android.widget.TextClock;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.example.chessapp.R;
 import com.example.chessapp.game.logic.Game;
+import com.example.chessapp.gui.PromotionChoice;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -38,12 +46,15 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     private StringBuilder moves;
     private boolean animation = false;
     private float animationX, animationY;
+    private final Context context;
+    private AlertDialog dialog;
 
 
     public Board(Context context, AttributeSet attrs) {
         super(context, attrs);
         pieces = BitmapFactory.decodeResource(context.getResources(), R.drawable.pieces);
         getHolder().addCallback(this);
+        this.context = context;
     }
 
     @Override
@@ -233,27 +244,64 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (animation)
-            return false;
-        moves = new StringBuilder();
-        int newX = (int) (event.getX() / getWidth() * boardSize);
-        int newY = (int) (event.getY() / getHeight() * boardSize);
-        if (selection && game.checkMove("" + selectedY + selectedX + newY + newX)) {
-            selection = false;
-            animationX = selectedX * pieceWidth;
-            animationY = selectedY * pieceHeight;
-            animation(newY, newX);
-        } else
-            selection = game.chessBoard[newY][newX] != ' ';
-        if (selection) {
-            game.checkMoveForPiece(newY * boardSize + newX, moves);
-        }
-        selectedX = newX;
-        selectedY = newY;
-
-        repaint();
+        showDialog();
         return false;
+//        if (animation)
+//            return false;
+//        moves = new StringBuilder();
+//        int newX = (int) (event.getX() / getWidth() * boardSize);
+//        int newY = (int) (event.getY() / getHeight() * boardSize);
+//        if (selection && game.checkMove("" + selectedY + selectedX + newY + newX)) {
+//            selection = false;
+//            animationX = selectedX * pieceWidth;
+//            animationY = selectedY * pieceHeight;
+//            animation(newY, newX);
+//        } else
+//            selection = game.chessBoard[newY][newX] != ' ';
+//        if (selection) {
+//            game.checkMoveForPiece(newY * boardSize + newX, moves);
+//        }
+//        selectedX = newX;
+//        selectedY = newY;
+//
+//        repaint();
+//        return false;
     }
 
+    private void showDialog() {
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 
+        LinearLayout layout = new LinearLayout(context);
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setLayoutParams(params);
+
+        TextView title = new TextView(context);
+        title.setText(R.string.promotion);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+        title.setTextAlignment(TEXT_ALIGNMENT_CENTER);
+        title.setBackgroundColor(Color.BLACK);
+        title.setTextColor(Color.WHITE);
+        layout.addView(title, params);
+
+        PromotionChoice promotionChoice = new PromotionChoice(context, this);
+        layout.addView(promotionChoice, params);
+
+        alertDialogBuilder.setView(layout);
+        alertDialogBuilder.setCancelable(false);
+        dialog = alertDialogBuilder.create();
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
+        lp.copyFrom(dialog.getWindow().getAttributes());
+        lp.width = WindowManager.LayoutParams.MATCH_PARENT;
+        lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        dialog.show();
+        dialog.getWindow().setAttributes(lp);
+
+    }
+
+    public void cancelDialog(char piece) {
+        dialog.cancel();
+    }
 }

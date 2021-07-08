@@ -1,19 +1,15 @@
 package com.example.chessapp;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowManager;
 
-import com.example.chessapp.gui.DepthPageTransformer;
-import com.example.chessapp.gui.GameFragment;
+import com.example.chessapp.gui.PromotionChoice;
 import com.example.chessapp.gui.ScreenSlidePagerAdapter;
-import com.example.chessapp.gui.StartingPage;
 
 import java.util.Objects;
 
@@ -33,7 +29,6 @@ public class MainActivity extends AppCompatActivity {
         viewPager2.setUserInputEnabled(false);
         FragmentStateAdapter pagerAdapter = new ScreenSlidePagerAdapter(this);
         viewPager2.setAdapter(pagerAdapter);
-        viewPager2.setPageTransformer(new DepthPageTransformer());
     }
 
     public void startGame(View view) {

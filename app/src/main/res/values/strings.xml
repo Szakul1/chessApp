@@ -2,4 +2,7 @@
     <string name="app_name">chessApp</string>
     <string name="chess_app">Chess app</string>
     <string name="play_with_bot">Play with bot</string>
+    <string name="play_with_firend">play with friend</string>
+    <string name="play_with_friend">play with friend</string>
+    <string name="promotion">Choose promotion</string>
 </resources>
