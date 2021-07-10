@@ -16,31 +16,84 @@ public class Game {
             {'R', 'K', 'B', 'Q', 'A', 'B', 'K', 'R'}};
 
     private static int kingPosWhite = 60, kingPosBlack = 4;
+    private final Engine engine;
+
+    public Game(boolean playerWhite) {
+        engine = new Engine(this);
+        if (!playerWhite) {
+            makeMove(engine.alphaBeta(Engine.globalDepth, Integer.MAX_VALUE, Integer.MIN_VALUE,
+                    "", -1));
+            flipBoard();
+        }
+    }
+
+    public void flipBoard() {
+        char temp;
+        for (int i = 0; i < 32; i++) {
+            int row = i / 8, col = i % 8;
+            if (Character.isUpperCase(chessBoard[row][col])) {
+                temp = Character.toLowerCase(chessBoard[row][col]);
+            } else {
+                temp = Character.toUpperCase(chessBoard[row][col]);
+            }
+            if (Character.isUpperCase(chessBoard[7 - row][7 - col])) {
+                chessBoard[row][col] = Character.toLowerCase(chessBoard[7 - row][7 - col]);
+            } else {
+                chessBoard[row][col] = Character.toUpperCase(chessBoard[7 - row][7 - col]);
+            }
+            chessBoard[7 - row][7 - col] = temp;
+        }
+        int kingTemp = kingPosWhite;
+        kingPosWhite = 63 - kingPosBlack;
+        kingPosBlack = 63 - kingTemp;
+    }
 
     public boolean checkMove(String move) {
-        Log.d("test", possibleMoves() + "move:" + move);
-        if (possibleMoves().contains(move)) {
-            makeMove(Character.getNumericValue(move.charAt(0)),
-                    Character.getNumericValue(move.charAt(1)),
-                    Character.getNumericValue(move.charAt(2)),
-                    Character.getNumericValue(move.charAt(3)));
-            return true;
+        return possibleMoves().contains(move);
+    }
+
+    public String makeMoveAndFlip(String move) {
+        makeMove(move);
+        flipBoard();
+        String returnString = engine.alphaBeta(Engine.globalDepth, Integer.MAX_VALUE,
+                Integer.MIN_VALUE, "", -1);
+        makeMove(returnString.substring(0, 5));
+        flipBoard();
+        return returnString.substring(5);
+    }
+
+    public void makeMove(String move) {
+        int row = Character.getNumericValue(move.charAt(0));
+        int col = Character.getNumericValue(move.charAt(1));
+        if (move.charAt(4) != 'U') {
+            int newRow = Character.getNumericValue(move.charAt(2));
+            int newCol = Character.getNumericValue(move.charAt(3));
+            chessBoard[newRow][newCol] = chessBoard[row][col];
+            chessBoard[row][col] = ' ';
+            if ('A' == chessBoard[newRow][newCol]) {
+                kingPosWhite = 8 * newRow + newCol;
+            }
+        } else { // pawn promotion
+            chessBoard[1][row] = ' ';
+            chessBoard[0][col] = move.charAt(3);
         }
-        return false;
     }
 
-    private void makeMove(int row, int col, int newRow, int newCol) {
-        // TODO promotion
-        Log.d("test", "move");
-        chessBoard[newRow][newCol] = chessBoard[row][col];
-        chessBoard[row][col] = ' ';
-    }
-
-    private void undoMove(int row, int col, int newRow, int newCol) {
-        // TODO promotion
-        Log.d("test", "move");
-        chessBoard[row][col] = chessBoard[newRow][newCol];
-        chessBoard[newRow][newCol] = ' ';
+    public void undoMove(String move) {
+        int row = Character.getNumericValue(move.charAt(0));
+        int col = Character.getNumericValue(move.charAt(1));
+        int newCol = Character.getNumericValue(move.charAt(3));
+        if (move.charAt(4) != 'U') {
+            int newRow = Character.getNumericValue(move.charAt(2));
+            chessBoard[row][col] = chessBoard[newRow][newCol];
+            chessBoard[newRow][newCol] = move.charAt(4);
+            if ('A' == chessBoard[row][col]) {
+                kingPosWhite = 8 * row + col;
+            }
+        } else { // pawn promotion
+            chessBoard[1][row] = 'P';
+            chessBoard[0][col] = move.charAt(2);
+        }
     }
 
     public String possibleMoves() {
@@ -80,14 +133,14 @@ public class Game {
         for (int i = -1; i <= 1; i += 2) { // capture and promotion
             int checkRow = row - 1, checkCol = col + i;
             if (checkBounds(checkRow, checkCol) &&
-                    Character.isLowerCase(chessBoard[row - 1][col + i]))
+                    Character.isLowerCase(chessBoard[checkRow][checkCol]))
                 if (position >= 16) { // No promotion
                     checkSafety(row, col, checkRow, checkCol, list, 'P');
                 } else { // promotion
                     checkPromotion(row, col, checkRow, checkCol, list);
                 }
         }
-        if (' ' == chessBoard[row - 1][col]) {
+        if (checkBounds(row - 1, col) && ' ' == chessBoard[row - 1][col]) {
             if (position >= 16) { // move one up
                 checkSafety(row, col, row - 1, col, list, 'P');
             } else { // promotion and no capture
@@ -110,7 +163,7 @@ public class Game {
                 list.append(col).append(checkCol).append(oldPiece)
                         .append(piece).append('U');
             }
-            chessBoard[row][col] = piece;
+            chessBoard[row][col] = 'P';
             chessBoard[checkRow][checkCol] = oldPiece;
         }
     }
@@ -250,10 +303,10 @@ public class Game {
         // rock | queen
         for (int i = -1; i <= 1; i += 2) {
             // column check
-            int checkRow = kingPosWhite / 8 + temp, chekCol = kingPosWhite % 8 + temp * i;
+            int checkRow = kingPosWhite / 8, chekCol = kingPosWhite % 8 + temp * i;
             while (checkBounds(checkRow, chekCol) && ' ' == chessBoard[checkRow][chekCol]) {
                 temp++;
-                checkRow = kingPosWhite / 8 + temp;
+                checkRow = kingPosWhite / 8;
                 chekCol = kingPosWhite % 8 + temp * i;
             }
             if (checkBounds(checkRow, chekCol) && ('r' == chessBoard[checkRow][chekCol] ||
@@ -263,11 +316,11 @@ public class Game {
             temp = 1;
             // row check
             checkRow = kingPosWhite / 8 + temp * i;
-            chekCol = kingPosWhite % 8 + temp;
+            chekCol = kingPosWhite % 8;
             while (checkBounds(checkRow, chekCol) && ' ' == chessBoard[checkRow][chekCol]) {
                 temp++;
                 checkRow = kingPosWhite / 8 + temp * i;
-                chekCol = kingPosWhite % 8 + temp;
+                chekCol = kingPosWhite % 8;
             }
             if (checkBounds(checkRow, chekCol) && ('r' == chessBoard[checkRow][chekCol] ||
                     'q' == chessBoard[checkRow][chekCol])) {
@@ -300,16 +353,15 @@ public class Game {
             checkCol = kingPosWhite % 8 + 1;
             if (checkBounds(checkRow, checkCol) && 'p' == chessBoard[checkRow][checkCol])
                 return false;
-            // king
-            for (int i = -1; i <= 1; i++) {
-                for (int j = -1; j <= 1; j++) {
-                    if (i == 0 && j == 0)
-                        continue;
-                    checkRow = kingPosWhite / 8 + i;
-                    checkCol = kingPosWhite % 8 + j;
-                    if (checkBounds(checkRow, checkCol) && 'a' == chessBoard[checkRow][checkCol]) {
-                        return false;
-                    }
+        }
+        // king
+        for (int i = -1; i <= 1; i++) {
+            for (int j = -1; j <= 1; j++) {
+                if (i == 0 && j == 0)
+                    continue;
+                int checkRow = kingPosWhite / 8 + i, checkCol = kingPosWhite % 8 + j;
+                if (checkBounds(checkRow, checkCol) && 'a' == chessBoard[checkRow][checkCol]) {
+                    return false;
                 }
             }
         }

@@ -17,8 +17,12 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.TextClock;
 import android.widget.TextView;
 
@@ -39,7 +43,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     private float pieceWidth;
     private float pieceHeight;
     private final Bitmap pieces;
-    private Rect[] piecesSource;
+    public Rect[] piecesSource;
     private Game game;
     private Integer selectedX = null, selectedY = null;
     private boolean selection = false;
@@ -48,6 +52,10 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     private float animationX, animationY;
     private final Context context;
     private AlertDialog dialog;
+    private ProgressBar progressBar;
+    private TextView progressText;
+    private boolean promotion = false;
+    private String promotionMove;
 
 
     public Board(Context context, AttributeSet attrs) {
@@ -55,6 +63,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         pieces = BitmapFactory.decodeResource(context.getResources(), R.drawable.pieces);
         getHolder().addCallback(this);
         this.context = context;
+
     }
 
     @Override
@@ -69,8 +78,11 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
                         (j + 1) * pieceImageSize, (i + 1) * pieceImageSize);
             }
         }
-        game = new Game();
+        game = new Game(true);
         moves = new StringBuilder();
+        RelativeLayout viewGroup = (RelativeLayout) getParent();
+        progressBar = viewGroup.findViewById(R.id.positionBar);
+        progressText = viewGroup.findViewById(R.id.positionValue);
         repaint();
     }
 
@@ -107,6 +119,11 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         for (int i = 0; i < moves.length(); i += 5) {
             int x = Character.getNumericValue(moves.charAt(i + 3));
             int y = Character.getNumericValue(moves.charAt(i + 2));
+            if (moves.charAt(i + 4) == 'U') {
+                x = Character.getNumericValue(moves.charAt(i + 1));
+                y = 0;
+            }
+
             if (game.chessBoard[y][x] != ' ') {
                 p.setStyle(Paint.Style.STROKE);
                 p.setStrokeWidth(10);
@@ -249,18 +266,37 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         moves = new StringBuilder();
         int newX = (int) (event.getX() / getWidth() * boardSize);
         int newY = (int) (event.getY() / getHeight() * boardSize);
-        if (selection && game.checkMove("" + selectedY + selectedX + newY + newX)) {
-            selection = false;
-            animationX = selectedX * pieceWidth;
-            animationY = selectedY * pieceHeight;
-            animation(newY, newX);
+        if (selection) {
+            selection = game.chessBoard[newY][newX] != ' ' &&
+                    Character.isUpperCase(game.chessBoard[newY][newX]);
+            if (newY == 0 && promotion) { // promotion
+                promotionMove = "" + selectedX + newX + game.chessBoard[newY][newX] + "Q" + "U";
+                if (game.checkMove("" + selectedX + newX + game.chessBoard[newY][newX] + "Q" + "U")) {
+                    showDialog();
+                }
+            } else {
+                String move = "" + selectedY + selectedX + newY + newX + game.chessBoard[newY][newX];
+                if (game.checkMove(move)) {
+                    String value = game.makeMoveAndFlip(move);
+
+
+                    animationX = selectedX * pieceWidth;
+                    animationY = selectedY * pieceHeight;
+                    progressText.setText(value);
+                    progressBar.setProgress(5);
+                    //            animation(newY, newX);
+                }
+
+            }
         } else
-            selection = game.chessBoard[newY][newX] != ' ';
+            selection = game.chessBoard[newY][newX] != ' ' &&
+                    Character.isUpperCase(game.chessBoard[newY][newX]);
         if (selection) {
             game.checkMoveForPiece(newY * boardSize + newX, moves);
         }
         selectedX = newX;
         selectedY = newY;
+        promotion = game.chessBoard[selectedY][selectedX] == 'P';
 
         repaint();
         return false;
@@ -284,7 +320,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         title.setTextColor(Color.WHITE);
         layout.addView(title, params);
 
-        PromotionChoice promotionChoice = new PromotionChoice(context, this);
+        PromotionChoice promotionChoice = new PromotionChoice(context, this, "white");
         layout.addView(promotionChoice, params);
 
         alertDialogBuilder.setView(layout);
@@ -301,5 +337,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
 
     public void cancelDialog(char piece) {
         dialog.cancel();
+        game.makeMoveAndFlip(promotionMove.substring(0, 3) + piece + promotionMove.charAt(4));
+        repaint();
     }
 }

@@ -22,15 +22,15 @@ import com.example.chessapp.game.Board;
 public class PromotionChoice extends View {
 
     private final Bitmap pieces;
-    private final Rect[] piecesSource;
+    private final String color;
     private Rect[][] piecesDst;
     private int blockSize;
     private final Board board;
 
-    public PromotionChoice(Context context, Board board) {
+    public PromotionChoice(Context context, Board board, String color) {
         super(context);
         pieces = BitmapFactory.decodeResource(context.getResources(), R.drawable.pieces);
-        piecesSource = new Rect[12];
+        this.color = color;
         this.board = board;
     }
 
@@ -45,10 +45,17 @@ public class PromotionChoice extends View {
         canvas.drawRect(0, 0, blockSize, blockSize, p);
         canvas.drawRect(blockSize, blockSize, blockSize * 2, blockSize * 2, p);
 
-        canvas.drawBitmap(pieces, piecesSource[1], piecesDst[0][0], p);
-        canvas.drawBitmap(pieces, piecesSource[2], piecesDst[0][1], p);
-        canvas.drawBitmap(pieces, piecesSource[3], piecesDst[1][0], p);
-        canvas.drawBitmap(pieces, piecesSource[4], piecesDst[1][1], p);
+        if (color.equals("white")) {
+            canvas.drawBitmap(pieces, board.piecesSource[1], piecesDst[0][0], p);
+            canvas.drawBitmap(pieces, board.piecesSource[2], piecesDst[0][1], p);
+            canvas.drawBitmap(pieces, board.piecesSource[3], piecesDst[1][0], p);
+            canvas.drawBitmap(pieces, board.piecesSource[4], piecesDst[1][1], p);
+        } else {
+            canvas.drawBitmap(pieces, board.piecesSource[7], piecesDst[0][0], p);
+            canvas.drawBitmap(pieces, board.piecesSource[8], piecesDst[0][1], p);
+            canvas.drawBitmap(pieces, board.piecesSource[9], piecesDst[1][0], p);
+            canvas.drawBitmap(pieces, board.piecesSource[10], piecesDst[1][1], p);
+        }
 
         p.setColor(Color.WHITE);
         p.setTextSize((int) (blockSize / 6));
@@ -63,14 +70,7 @@ public class PromotionChoice extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldW, int oldH) {
         super.onSizeChanged(w, h, oldW, oldH);
-        int pieceImageSize = pieces.getHeight() / 2;
         blockSize = h / 2;
-        for (int i = 0; i < 2; i++) {
-            for (int j = 0; j < 6; j++) {
-                piecesSource[i * 6 + j] = new Rect(pieceImageSize * j, pieceImageSize * i,
-                        (j + 1) * pieceImageSize, (i + 1) * pieceImageSize);
-            }
-        }
         piecesDst = new Rect[2][2];
         for (int i = 0; i < 2; i++) {
             for (int j = 0; j < 2; j++) {
