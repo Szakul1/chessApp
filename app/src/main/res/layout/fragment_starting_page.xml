@@ -18,7 +18,7 @@
         android:text="@string/chess_app" />
 
     <Button
-        android:onClick="startGame"
+        android:onClick="gameWithBot"
         android:backgroundTint="@color/black"
         android:layout_width="250sp"
         android:layout_height="70sp"
@@ -27,7 +27,7 @@
         android:text="@string/play_with_bot" />
 
     <Button
-        android:onClick="startGame"
+        android:onClick="gameWithPlayer"
         android:backgroundTint="@color/black"
         android:layout_width="250sp"
         android:layout_height="70sp"

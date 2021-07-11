@@ -43,6 +43,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     private float pieceWidth;
     private float pieceHeight;
     private final Bitmap pieces;
+    private final boolean twoPlayers;
     public Rect[] piecesSource;
     private Game game;
     private Integer selectedX = null, selectedY = null;
@@ -56,11 +57,13 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     private TextView progressText;
     private boolean promotion = false;
     private String promotionMove;
+    private boolean whiteTurn = true;
 
 
-    public Board(Context context, AttributeSet attrs) {
-        super(context, attrs);
+    public Board(Context context, boolean twoPlayers) {
+        super(context);
         pieces = BitmapFactory.decodeResource(context.getResources(), R.drawable.pieces);
+        this.twoPlayers = twoPlayers;
         getHolder().addCallback(this);
         this.context = context;
 
@@ -80,7 +83,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         }
         game = new Game(true);
         moves = new StringBuilder();
-        RelativeLayout viewGroup = (RelativeLayout) getParent();
+        RelativeLayout viewGroup = (RelativeLayout) getParent().getParent();
         progressBar = viewGroup.findViewById(R.id.positionBar);
         progressText = viewGroup.findViewById(R.id.positionValue);
         repaint();
@@ -119,9 +122,13 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         for (int i = 0; i < moves.length(); i += 5) {
             int x = Character.getNumericValue(moves.charAt(i + 3));
             int y = Character.getNumericValue(moves.charAt(i + 2));
+            int x1 = Character.getNumericValue(moves.charAt(i + 1));
             if (moves.charAt(i + 4) == 'U') {
-                x = Character.getNumericValue(moves.charAt(i + 1));
+                x = x1;
                 y = 0;
+            } else if (moves.charAt(i + 4) == 'u') {
+                x = x1;
+                y = boardSize - 1;
             }
 
             if (game.chessBoard[y][x] != ' ') {
@@ -192,7 +199,14 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
                         draw = false;
                 }
                 if (draw) {
-                    canvas.drawBitmap(pieces, src, dst, null);
+                    if (twoPlayers && Character.isLowerCase(game.chessBoard[i][j])) {
+                        canvas.save();
+                        canvas.rotate(180, dst.centerX(), dst.centerY());
+                        canvas.drawBitmap(pieces, src, dst, null);
+                        canvas.restore();
+                    } else {
+                        canvas.drawBitmap(pieces, src, dst, null);
+                    }
                 }
             }
         }
@@ -267,19 +281,20 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         int newX = (int) (event.getX() / getWidth() * boardSize);
         int newY = (int) (event.getY() / getHeight() * boardSize);
         if (selection) {
-            selection = game.chessBoard[newY][newX] != ' ' &&
-                    Character.isUpperCase(game.chessBoard[newY][newX]);
-            if (newY == 0 && promotion) { // promotion
-                promotionMove = "" + selectedX + newX + game.chessBoard[newY][newX] + "Q" + "U";
-                if (game.checkMove("" + selectedX + newX + game.chessBoard[newY][newX] + "Q" + "U")) {
+            selection = game.chessBoard[newY][newX] != ' ' && game.canTake(newY, newX, !whiteTurn);
+            if (whiteTurn ? newY == 0 : newY == boardSize - 1 && promotion) { // promotion
+                promotionMove = "" + selectedX + newX + game.chessBoard[newY][newX] +
+                        (whiteTurn ? "Q" : "q") + (whiteTurn ? "U" : "u");
+                if (game.checkMove(promotionMove, whiteTurn)) {
                     showDialog();
                 }
             } else {
                 String move = "" + selectedY + selectedX + newY + newX + game.chessBoard[newY][newX];
-                if (game.checkMove(move)) {
+                if (game.checkMove(move, whiteTurn)) {
                     String value = game.makeMoveAndFlip(move);
+                    whiteTurn = !whiteTurn;
 
-
+                    selection = false;
                     animationX = selectedX * pieceWidth;
                     animationY = selectedY * pieceHeight;
                     progressText.setText(value);
@@ -288,15 +303,15 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
                 }
 
             }
-        } else
-            selection = game.chessBoard[newY][newX] != ' ' &&
-                    Character.isUpperCase(game.chessBoard[newY][newX]);
+        } else {
+            selection = game.chessBoard[newY][newX] != ' ' && game.canTake(newY, newX, !whiteTurn);
+        }
         if (selection) {
-            game.checkMoveForPiece(newY * boardSize + newX, moves);
+            game.checkMoveForPiece(newY * boardSize + newX, moves, whiteTurn);
         }
         selectedX = newX;
         selectedY = newY;
-        promotion = game.chessBoard[selectedY][selectedX] == 'P';
+        promotion = game.chessBoard[selectedY][selectedX] == (whiteTurn ? 'P' : 'p');
 
         repaint();
         return false;
@@ -320,7 +335,11 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         title.setTextColor(Color.WHITE);
         layout.addView(title, params);
 
-        PromotionChoice promotionChoice = new PromotionChoice(context, this, "white");
+        PromotionChoice promotionChoice = new PromotionChoice(context, this, whiteTurn);
+        if (!whiteTurn) {
+            title.setRotation(180);
+            promotionChoice.setRotation(180);
+        }
         layout.addView(promotionChoice, params);
 
         alertDialogBuilder.setView(layout);
@@ -336,8 +355,12 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     public void cancelDialog(char piece) {
+        if (!whiteTurn)
+            piece = Character.toLowerCase(piece);
         dialog.cancel();
         game.makeMoveAndFlip(promotionMove.substring(0, 3) + piece + promotionMove.charAt(4));
+        whiteTurn = !whiteTurn;
+        selection = false;
         repaint();
     }
 }

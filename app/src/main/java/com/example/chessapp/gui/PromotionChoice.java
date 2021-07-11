@@ -22,15 +22,15 @@ import com.example.chessapp.game.Board;
 public class PromotionChoice extends View {
 
     private final Bitmap pieces;
-    private final String color;
+    private boolean white;
     private Rect[][] piecesDst;
     private int blockSize;
     private final Board board;
 
-    public PromotionChoice(Context context, Board board, String color) {
+    public PromotionChoice(Context context, Board board, boolean white) {
         super(context);
         pieces = BitmapFactory.decodeResource(context.getResources(), R.drawable.pieces);
-        this.color = color;
+        this.white = white;
         this.board = board;
     }
 
@@ -45,7 +45,7 @@ public class PromotionChoice extends View {
         canvas.drawRect(0, 0, blockSize, blockSize, p);
         canvas.drawRect(blockSize, blockSize, blockSize * 2, blockSize * 2, p);
 
-        if (color.equals("white")) {
+        if (white) {
             canvas.drawBitmap(pieces, board.piecesSource[1], piecesDst[0][0], p);
             canvas.drawBitmap(pieces, board.piecesSource[2], piecesDst[0][1], p);
             canvas.drawBitmap(pieces, board.piecesSource[3], piecesDst[1][0], p);

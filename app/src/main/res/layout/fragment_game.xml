@@ -7,7 +7,6 @@
     tools:context=".gui.GameFragment">
 
     <ProgressBar
-        android:scaleY="2"
         android:id="@+id/positionBar"
         style="@android:style/Widget.ProgressBar.Horizontal"
         android:layout_width="match_parent"
@@ -16,26 +15,26 @@
         android:max="20"
         android:progress="10"
         android:progressBackgroundTint="@color/black"
-        android:progressTint="@color/white" />
+        android:progressTint="@color/white"
+        android:scaleY="2" />
 
     <TextView
         android:id="@+id/positionValue"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textAlignment="center"
-        android:textColor="@color/grey"
-        android:text="0.00"
-        android:textSize="25sp"
         android:layout_alignStart="@id/positionBar"
         android:layout_alignEnd="@id/positionBar"
         android:layout_alignBottom="@id/positionBar"
-        />
+        android:text="0.00"
+        android:textAlignment="center"
+        android:textColor="@color/grey"
+        android:textSize="25sp" />
 
-    <com.example.chessapp.game.Board
+    <LinearLayout
         android:id="@+id/board"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:layout_gravity="center" />
+        android:orientation="horizontal" />
 
 </RelativeLayout>

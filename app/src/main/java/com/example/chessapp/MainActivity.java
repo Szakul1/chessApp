@@ -17,6 +17,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     private ViewPager2 viewPager2;
+    private ScreenSlidePagerAdapter pagerAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,11 +28,17 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         viewPager2 = findViewById(R.id.pager);
         viewPager2.setUserInputEnabled(false);
-        FragmentStateAdapter pagerAdapter = new ScreenSlidePagerAdapter(this);
+        pagerAdapter = new ScreenSlidePagerAdapter(this);
         viewPager2.setAdapter(pagerAdapter);
     }
 
-    public void startGame(View view) {
+    public void gameWithBot(View view) {
+        pagerAdapter.setTwoPlayers(false);
+        viewPager2.setCurrentItem(1);
+    }
+
+    public void gameWithPlayer(View view) {
+        pagerAdapter.setTwoPlayers(true);
         viewPager2.setCurrentItem(1);
     }
 

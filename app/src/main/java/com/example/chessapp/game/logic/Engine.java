@@ -14,7 +14,7 @@ public class Engine {
      * @return move (4 char) + value
      */
     public String alphaBeta(int depth, int beta, int alpha, String move, int player) {
-        String list = game.possibleMoves();
+        String list = game.possibleMoves(false);
 
         if (depth == 0 || list.length() == 0) {
             return move + rating() * player;
