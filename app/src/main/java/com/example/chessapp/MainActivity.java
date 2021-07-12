@@ -34,11 +34,13 @@ public class MainActivity extends AppCompatActivity {
 
     public void gameWithBot(View view) {
         pagerAdapter.setTwoPlayers(false);
+        viewPager2.setAdapter(pagerAdapter);
         viewPager2.setCurrentItem(1);
     }
 
     public void gameWithPlayer(View view) {
         pagerAdapter.setTwoPlayers(true);
+        viewPager2.setAdapter(pagerAdapter);
         viewPager2.setCurrentItem(1);
     }
 

@@ -4,6 +4,8 @@ import android.util.Log;
 
 import androidx.appcompat.widget.WithHint;
 
+import com.example.chessapp.game.Board;
+
 public class Game {
     // r - rook, k - knight, b - bishop, q - queen, a - king p - pawn
     // capital for white lower for black
@@ -19,52 +21,29 @@ public class Game {
 
     private static int kingPosWhite = 60, kingPosBlack = 4;
     private final Engine engine;
+    private final Board board;
 
-    public Game(boolean playerWhite) {
+    public Game(Board board, boolean white) {
+        this.board = board;
         engine = new Engine(this);
-        if (!playerWhite) {
+        if (!white) {
             makeMove(engine.alphaBeta(Engine.globalDepth, Integer.MAX_VALUE, Integer.MIN_VALUE,
-                    "", -1));
-            flipBoard();
+                    "", -1, false));
         }
-    }
-
-    public void flipBoard() {
-        char temp;
-        for (int i = 0; i < 32; i++) {
-            int row = i / 8, col = i % 8;
-            if (Character.isUpperCase(chessBoard[row][col])) {
-                temp = Character.toLowerCase(chessBoard[row][col]);
-            } else {
-                temp = Character.toUpperCase(chessBoard[row][col]);
-            }
-            if (Character.isUpperCase(chessBoard[7 - row][7 - col])) {
-                chessBoard[row][col] = Character.toLowerCase(chessBoard[7 - row][7 - col]);
-            } else {
-                chessBoard[row][col] = Character.toUpperCase(chessBoard[7 - row][7 - col]);
-            }
-            chessBoard[7 - row][7 - col] = temp;
-        }
-        int kingTemp = kingPosWhite;
-        kingPosWhite = 63 - kingPosBlack;
-        kingPosBlack = 63 - kingTemp;
     }
 
     public boolean checkMove(String move, boolean white) {
-        Log.d("test", possibleMoves(white) + "move: " + move);
+//        Log.d("test", possibleMoves(white) + "move: " + move);
         return possibleMoves(white).contains(move);
     }
 
-    public String makeMoveAndFlip(String move) {
+    public String makeMoveAndResponse(String move, boolean white) {
         makeMove(move);
-
-//        flipBoard();
-//        String returnString = engine.alphaBeta(Engine.globalDepth, Integer.MAX_VALUE,
-//                Integer.MIN_VALUE, "", -1);
-//        makeMove(returnString.substring(0, 5));
-//        flipBoard();
-//        return returnString.substring(5);
-        return "";
+        board.repaint();
+        String returnString = engine.alphaBeta(Engine.globalDepth, Integer.MAX_VALUE,
+                Integer.MIN_VALUE, "", -1, !white);
+        makeMove(returnString.substring(0, 5));
+        return returnString.substring(5);
     }
 
     public void makeMove(String move) {
@@ -380,9 +359,9 @@ public class Game {
             }
         }
 
-        if (kingPos >= 16) {
+        if (white ? kingPos >= 16 : kingPos <= 48) {
             // pawn
-            int checkRow = kingPos / 8 - 1, checkCol = kingPos % 8 - 1;
+            int checkRow = white ? kingPos / 8 - 1 : kingPos / 8 + 1, checkCol = kingPos % 8 - 1;
             if (checkBounds(checkRow, checkCol) && kingInDanger(checkRow, checkCol, white, 'p'))
                 return false;
             checkRow = kingPos / 8 + 1;

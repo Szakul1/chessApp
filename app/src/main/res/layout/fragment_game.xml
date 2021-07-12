@@ -12,8 +12,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_above="@+id/board"
-        android:max="20"
-        android:progress="10"
+        android:max="1000000"
+        android:progress="500000"
         android:progressBackgroundTint="@color/black"
         android:progressTint="@color/white"
         android:scaleY="2" />

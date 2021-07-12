@@ -1,5 +1,6 @@
 package com.example.chessapp.game;
 
+import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -37,6 +38,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+@SuppressLint("ViewConstructor")
 public class Board extends SurfaceView implements SurfaceHolder.Callback {
 
     private final static int boardSize = 8;
@@ -59,7 +61,6 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     private String promotionMove;
     private boolean whiteTurn = true;
 
-
     public Board(Context context, boolean twoPlayers) {
         super(context);
         pieces = BitmapFactory.decodeResource(context.getResources(), R.drawable.pieces);
@@ -81,7 +82,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
                         (j + 1) * pieceImageSize, (i + 1) * pieceImageSize);
             }
         }
-        game = new Game(true);
+        game = new Game(this, true);
         moves = new StringBuilder();
         RelativeLayout viewGroup = (RelativeLayout) getParent().getParent();
         progressBar = viewGroup.findViewById(R.id.positionBar);
@@ -282,7 +283,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         int newY = (int) (event.getY() / getHeight() * boardSize);
         if (selection) {
             selection = game.chessBoard[newY][newX] != ' ' && game.canTake(newY, newX, !whiteTurn);
-            if (whiteTurn ? newY == 0 : newY == boardSize - 1 && promotion) { // promotion
+            if ((whiteTurn ? newY == 0 : newY == boardSize - 1) && promotion) { // promotion
                 promotionMove = "" + selectedX + newX + game.chessBoard[newY][newX] +
                         (whiteTurn ? "Q" : "q") + (whiteTurn ? "U" : "u");
                 if (game.checkMove(promotionMove, whiteTurn)) {
@@ -291,14 +292,18 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             } else {
                 String move = "" + selectedY + selectedX + newY + newX + game.chessBoard[newY][newX];
                 if (game.checkMove(move, whiteTurn)) {
-                    String value = game.makeMoveAndFlip(move);
-                    whiteTurn = !whiteTurn;
+                    if (twoPlayers) {
+                        game.makeMove(move);
+                        whiteTurn = !whiteTurn;
+                    } else {
+                        updateBar(game.makeMoveAndResponse(move, true));
+                    }
+
 
                     selection = false;
                     animationX = selectedX * pieceWidth;
                     animationY = selectedY * pieceHeight;
-                    progressText.setText(value);
-                    progressBar.setProgress(5);
+
                     //            animation(newY, newX);
                 }
 
@@ -358,9 +363,24 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         if (!whiteTurn)
             piece = Character.toLowerCase(piece);
         dialog.cancel();
-        game.makeMoveAndFlip(promotionMove.substring(0, 3) + piece + promotionMove.charAt(4));
+        String move = promotionMove.substring(0, 3) + piece + promotionMove.charAt(4);
+        if (twoPlayers) {
+            game.makeMove(move);
+        } else {
+            updateBar(game.makeMoveAndResponse(move, true));
+        }
         whiteTurn = !whiteTurn;
         selection = false;
         repaint();
     }
+
+    @SuppressLint("SetTextI18n")
+    private void updateBar(String value) {
+        int val = -Integer.parseInt(value);
+        progressText.setText("" + val);
+        ObjectAnimator.ofInt(progressBar, "progress", val / 2 + 500000)
+                .setDuration(600)
+                .start();
+    }
+
 }
