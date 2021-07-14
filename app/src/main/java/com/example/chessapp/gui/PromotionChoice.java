@@ -22,7 +22,7 @@ import com.example.chessapp.game.Board;
 public class PromotionChoice extends View {
 
     private final Bitmap pieces;
-    private boolean white;
+    private final boolean white;
     private Rect[][] piecesDst;
     private int blockSize;
     private final Board board;
@@ -61,7 +61,7 @@ public class PromotionChoice extends View {
         p.setTextSize((int) (blockSize / 6));
         p.setTextAlign(Paint.Align.CENTER);
         canvas.drawText("Queen", (int) (blockSize / 2), blockSize - 20, p);
-        canvas.drawText("Rock", (int) (blockSize / 2) + blockSize, blockSize - 20 + blockSize, p);
+        canvas.drawText("Rook", (int) (blockSize / 2) + blockSize, blockSize - 20 + blockSize, p);
         p.setColor(Color.BLACK);
         canvas.drawText("Knight", (int) (blockSize / 2) + blockSize, blockSize - 20, p);
         canvas.drawText("Bishop", (int) (blockSize / 2), blockSize - 20 + blockSize, p);

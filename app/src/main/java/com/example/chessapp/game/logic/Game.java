@@ -19,7 +19,7 @@ public class Game {
             {'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'},
             {'R', 'K', 'B', 'Q', 'A', 'B', 'K', 'R'}};
 
-    private static int kingPosWhite = 60, kingPosBlack = 4;
+    public int kingPosWhite = 60, kingPosBlack = 4;
     private final Engine engine;
     private final Board board;
 
@@ -42,6 +42,9 @@ public class Game {
         board.repaint();
         String returnString = engine.alphaBeta(Engine.globalDepth, Integer.MAX_VALUE,
                 Integer.MIN_VALUE, "", -1, !white);
+//        if (returnString.isEmpty()) {
+//
+//        }
         makeMove(returnString.substring(0, 5));
         return returnString.substring(5);
     }
@@ -154,7 +157,7 @@ public class Game {
     }
 
     private boolean canBePromoted(int position, boolean white) {
-        return white && position >= 16 || !white && position <= 48;
+        return white ? position >= 16 : position <= 48;
     }
 
     private void checkPromotion(int row, int col, int checkRow, int checkCol, StringBuilder list, boolean white) {
@@ -262,7 +265,7 @@ public class Game {
         chessBoard[checkRow][checkCol] = oldPiece;
     }
 
-    private String possibleA(int position, boolean white) {
+    public String possibleA(int position, boolean white) {
         char piece = white ? 'A' : 'a';
         StringBuilder list = new StringBuilder();
         char oldPiece;
@@ -275,7 +278,7 @@ public class Game {
                     chessBoard[row][col] = ' ';
                     chessBoard[checkRow][checkCol] = piece;
                     int kingTemp = white ? kingPosWhite : kingPosBlack;
-                    int pos = position + i / 3 * 8 + i % 3 - 9;
+                    int pos = checkRow * 8 + checkCol;
                     if (white)
                         kingPosWhite = pos;
                     else
@@ -296,7 +299,7 @@ public class Game {
         return list.toString();
     }
 
-    private boolean kingSafe(boolean white) {
+    public boolean kingSafe(boolean white) {
         int kingPos = white ? kingPosWhite : kingPosBlack;
         // bishop | queen
         int temp = 1;
@@ -315,7 +318,7 @@ public class Game {
                 temp = 1;
             }
         }
-        // rock | queen
+        // rook | queen
         for (int i = -1; i <= 1; i += 2) {
             // column check
             int checkRow = kingPos / 8, checkCol = kingPos % 8 + temp * i;
@@ -364,7 +367,6 @@ public class Game {
             int checkRow = white ? kingPos / 8 - 1 : kingPos / 8 + 1, checkCol = kingPos % 8 - 1;
             if (checkBounds(checkRow, checkCol) && kingInDanger(checkRow, checkCol, white, 'p'))
                 return false;
-            checkRow = kingPos / 8 + 1;
             checkCol = kingPos % 8 + 1;
             if (checkBounds(checkRow, checkCol) && kingInDanger(checkRow, checkCol, white, 'p'))
                 return false;
