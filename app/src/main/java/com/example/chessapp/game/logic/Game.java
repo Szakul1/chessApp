@@ -42,9 +42,9 @@ public class Game {
         board.repaint();
         String returnString = engine.alphaBeta(Engine.globalDepth, Integer.MAX_VALUE,
                 Integer.MIN_VALUE, "", -1, !white);
-//        if (returnString.isEmpty()) {
-//
-//        }
+        if (returnString.isEmpty()) {
+            return "Black";
+        }
         makeMove(returnString.substring(0, 5));
         return returnString.substring(5);
     }

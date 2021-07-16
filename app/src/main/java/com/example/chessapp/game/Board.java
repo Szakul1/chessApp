@@ -29,7 +29,10 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.viewpager.widget.ViewPager;
+import androidx.viewpager2.widget.ViewPager2;
 
+import com.example.chessapp.MainActivity;
 import com.example.chessapp.R;
 import com.example.chessapp.game.logic.Game;
 import com.example.chessapp.gui.PromotionChoice;
@@ -40,7 +43,6 @@ import java.util.concurrent.TimeUnit;
 
 @SuppressLint("ViewConstructor")
 public class Board extends SurfaceView implements SurfaceHolder.Callback {
-
     private final static int boardSize = 8;
     private float pieceWidth;
     private float pieceHeight;
@@ -60,6 +62,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     private boolean promotion = false;
     private String promotionMove;
     private boolean whiteTurn = true;
+    private String finishedGame = null;
 
     public Board(Context context, boolean twoPlayers) {
         super(context);
@@ -276,7 +279,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (animation)
+        if (animation || finishedGame != null)
             return false;
         moves = new StringBuilder();
         int newX = (int) (event.getX() / getWidth() * boardSize);
@@ -295,6 +298,9 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
                     if (twoPlayers) {
                         game.makeMove(move);
                         whiteTurn = !whiteTurn;
+                        if (game.possibleMoves(whiteTurn).isEmpty()) {
+                            showEndDialog(whiteTurn ? "Black" : "White");
+                        }
                     } else {
                         updateBar(game.makeMoveAndResponse(move, true));
                     }
@@ -364,23 +370,71 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             piece = Character.toLowerCase(piece);
         dialog.cancel();
         String move = promotionMove.substring(0, 3) + piece + promotionMove.charAt(4);
+        whiteTurn = !whiteTurn;
         if (twoPlayers) {
             game.makeMove(move);
+            if (game.possibleMoves(whiteTurn).isEmpty()) {
+                showEndDialog(whiteTurn ? "Black" : "White");
+            }
         } else {
             updateBar(game.makeMoveAndResponse(move, true));
         }
-        whiteTurn = !whiteTurn;
         selection = false;
         repaint();
     }
 
     @SuppressLint("SetTextI18n")
     private void updateBar(String value) {
-        int val = -Integer.parseInt(value);
+        int val;
+        if (value.equals("Black")) {
+            val = 0;
+            finishedGame = value;
+        } else if (value.equals("White")) {
+            val = Integer.MAX_VALUE;
+            finishedGame = value;
+        } else {
+            val = -Integer.parseInt(value);
+        }
         progressText.setText("" + val);
         ObjectAnimator.ofInt(progressBar, "progress", val / 2 + 500000)
                 .setDuration(600)
                 .start();
+        if (finishedGame != null) {
+            showEndDialog(value);
+        }
+    }
+
+    private void showEndDialog(String result) {
+        Dialog dialog = new Dialog(context);
+        dialog.setContentView(R.layout.end_dialog);
+        dialog.setTitle("Game finished");
+        ((TextView) dialog.findViewById(R.id.result)).setText(String.format("%s won", result));
+        dialog.findViewById(R.id.back).setOnClickListener(view -> {
+            ViewPager2 viewPager2 = ((MainActivity) getContext()).getViewPager2();
+            viewPager2.setCurrentItem(viewPager2.getCurrentItem() - 1);
+            dialog.dismiss();
+        });
+        dialog.findViewById(R.id.analyzeButton).setOnClickListener(view -> {
+            analyze();
+            dialog.dismiss();
+        });
+        dialog.findViewById(R.id.replay).setOnClickListener(view -> {
+            dialog.dismiss();
+            game=  new Game(this, true);
+            selectedX = null;
+            selectedY = null;
+            selection = false;
+            updateBar("0");
+            promotion = false;
+            whiteTurn = true;
+            finishedGame = null;
+            repaint();
+        });
+
+        dialog.show();
+    }
+
+    private void analyze() {
     }
 
 }
