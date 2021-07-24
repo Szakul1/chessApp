@@ -11,25 +11,17 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
-import android.util.AttributeSet;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.View;
-import android.view.ViewGroup;
-import android.view.ViewParent;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
-import android.widget.TextClock;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.viewpager.widget.ViewPager;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.chessapp.MainActivity;
@@ -52,7 +44,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     private Game game;
     private Integer selectedX = null, selectedY = null;
     private boolean selection = false;
-    private StringBuilder moves;
+    private String moves = "";
     private boolean animation = false;
     private float animationX, animationY;
     private final Context context;
@@ -62,7 +54,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     private boolean promotion = false;
     private String promotionMove;
     private boolean whiteTurn = true;
-    private String finishedGame = null;
+    public String finishedGame = null;
 
     public Board(Context context, boolean twoPlayers) {
         super(context);
@@ -86,7 +78,6 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             }
         }
         game = new Game(this, true);
-        moves = new StringBuilder();
         RelativeLayout viewGroup = (RelativeLayout) getParent().getParent();
         progressBar = viewGroup.findViewById(R.id.positionBar);
         progressText = viewGroup.findViewById(R.id.positionValue);
@@ -122,19 +113,9 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         Paint p = new Paint();
         p.setARGB(255, 211, 211, 211);
         int radius;
-        String moves = this.moves.toString();
-        for (int i = 0; i < moves.length(); i += 5) {
-            int x = Character.getNumericValue(moves.charAt(i + 3));
-            int y = Character.getNumericValue(moves.charAt(i + 2));
-            int x1 = Character.getNumericValue(moves.charAt(i + 1));
-            if (moves.charAt(i + 4) == 'U') {
-                x = x1;
-                y = 0;
-            } else if (moves.charAt(i + 4) == 'u') {
-                x = x1;
-                y = boardSize - 1;
-            }
-
+        for (int i = 0; i < moves.length(); i += 2) {
+            int y = Character.getNumericValue(moves.charAt(i));
+            int x = Character.getNumericValue(moves.charAt(i + 1));
             if (game.chessBoard[y][x] != ' ') {
                 p.setStyle(Paint.Style.STROKE);
                 p.setStrokeWidth(10);
@@ -146,13 +127,16 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
 
             canvas.drawCircle(x * pieceWidth + pieceWidth / 2,
                     y * pieceHeight + pieceWidth / 2, radius, p);
-
         }
     }
 
     private void drawPieces(Canvas canvas) {
         Rect dst;
         Rect src = null;
+        Paint p = new Paint();
+        p.setColor(Color.RED);
+        p.setStyle(Paint.Style.STROKE);
+        p.setStrokeWidth(10);
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 boolean draw = true;
@@ -163,7 +147,10 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
                     dst = new Rect((int) pieceWidth * j, (int) pieceHeight * i,
                             (j + 1) * (int) pieceWidth, (i + 1) * (int) pieceHeight);
                 switch (game.chessBoard[i][j]) {
-                    case 'A':
+                    case 'K':
+                        if (!game.kingSafe(true)) {
+                            canvas.drawRect(dst, p);
+                        }
                         src = piecesSource[0];
                         break;
                     case 'Q':
@@ -172,7 +159,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
                     case 'B':
                         src = piecesSource[2];
                         break;
-                    case 'K':
+                    case 'N':
                         src = piecesSource[3];
                         break;
                     case 'R':
@@ -181,7 +168,10 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
                     case 'P':
                         src = piecesSource[5];
                         break;
-                    case 'a':
+                    case 'k':
+                        if (!game.kingSafe(false)) {
+                            canvas.drawRect(dst, p);
+                        }
                         src = piecesSource[6];
                         break;
                     case 'q':
@@ -190,7 +180,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
                     case 'b':
                         src = piecesSource[8];
                         break;
-                    case 'k':
+                    case 'n':
                         src = piecesSource[9];
                         break;
                     case 'r':
@@ -279,56 +269,53 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (animation || finishedGame != null)
+        if (finishedGame != null) {
+            showEndDialog();
             return false;
-        moves = new StringBuilder();
+        }
+        if (animation)
+            return false;
+        moves = "";
         int newX = (int) (event.getX() / getWidth() * boardSize);
         int newY = (int) (event.getY() / getHeight() * boardSize);
         if (selection) {
-            selection = game.chessBoard[newY][newX] != ' ' && game.canTake(newY, newX, !whiteTurn);
-            if ((whiteTurn ? newY == 0 : newY == boardSize - 1) && promotion) { // promotion
-                promotionMove = "" + selectedX + newX + game.chessBoard[newY][newX] +
-                        (whiteTurn ? "Q" : "q") + (whiteTurn ? "U" : "u");
-                if (game.checkMove(promotionMove, whiteTurn)) {
-                    showDialog();
-                }
-            } else {
-                String move = "" + selectedY + selectedX + newY + newX + game.chessBoard[newY][newX];
-                if (game.checkMove(move, whiteTurn)) {
-                    if (twoPlayers) {
-                        game.makeMove(move);
-                        whiteTurn = !whiteTurn;
-                        if (game.possibleMoves(whiteTurn).isEmpty()) {
-                            showEndDialog(whiteTurn ? "Black" : "White");
-                        }
-                    } else {
-                        updateBar(game.makeMoveAndResponse(move, true));
-                    }
-
-
-                    selection = false;
-                    animationX = selectedX * pieceWidth;
-                    animationY = selectedY * pieceHeight;
-
-                    //            animation(newY, newX);
-                }
-
-            }
+            checkMove(newX, newY);
         } else {
-            selection = game.chessBoard[newY][newX] != ' ' && game.canTake(newY, newX, !whiteTurn);
+            selection = game.isMyPiece(newY, newX, whiteTurn);
         }
         if (selection) {
-            game.checkMoveForPiece(newY * boardSize + newX, moves, whiteTurn);
+            moves = game.getMovesForPiece(newY, newX, whiteTurn);
         }
         selectedX = newX;
         selectedY = newY;
-        promotion = game.chessBoard[selectedY][selectedX] == (whiteTurn ? 'P' : 'p');
 
         repaint();
         return false;
     }
 
-    private void showDialog() {
+    private void checkMove(int newX, int newY) {
+        selection = game.isMyPiece(newY, newX, whiteTurn);
+        if (game.checkMoveAndMake(selectedY, selectedX, newY, newX, whiteTurn)) {
+            if (twoPlayers) {
+                whiteTurn = !whiteTurn;
+            } else {
+                game.response(!whiteTurn);
+//                        updateBar(game.makeMoveAndResponse(move, true));
+            }
+            game.gameFinished(whiteTurn);
+
+
+            selection = false;
+            animationX = selectedX * pieceWidth;
+            animationY = selectedY * pieceHeight;
+
+            //            animation(newY, newX);
+        }
+
+    }
+
+    public void showDialog(String promotionMove) {
+        this.promotionMove = promotionMove;
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 
         LinearLayout layout = new LinearLayout(context);
@@ -366,20 +353,17 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     public void cancelDialog(char piece) {
-        if (!whiteTurn)
+        if (whiteTurn)
             piece = Character.toLowerCase(piece);
         dialog.cancel();
-        String move = promotionMove.substring(0, 3) + piece + promotionMove.charAt(4);
-        whiteTurn = !whiteTurn;
+        String move = promotionMove.substring(0, 2) + piece + promotionMove.charAt(3);
         if (twoPlayers) {
-            game.makeMove(move);
-            if (game.possibleMoves(whiteTurn).isEmpty()) {
-                showEndDialog(whiteTurn ? "Black" : "White");
-            }
+            game.makeRealMove(move);
         } else {
-            updateBar(game.makeMoveAndResponse(move, true));
+            game.response(!whiteTurn);
+            //            updateBar(game.makeMoveAndResponse(move, true));
         }
-        selection = false;
+        game.gameFinished(whiteTurn);
         repaint();
     }
 
@@ -399,16 +383,13 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         ObjectAnimator.ofInt(progressBar, "progress", val / 2 + 500000)
                 .setDuration(600)
                 .start();
-        if (finishedGame != null) {
-            showEndDialog(value);
-        }
     }
 
-    private void showEndDialog(String result) {
+    public void showEndDialog() {
         Dialog dialog = new Dialog(context);
         dialog.setContentView(R.layout.end_dialog);
         dialog.setTitle("Game finished");
-        ((TextView) dialog.findViewById(R.id.result)).setText(String.format("%s won", result));
+        ((TextView) dialog.findViewById(R.id.result)).setText(finishedGame);
         dialog.findViewById(R.id.back).setOnClickListener(view -> {
             ViewPager2 viewPager2 = ((MainActivity) getContext()).getViewPager2();
             viewPager2.setCurrentItem(viewPager2.getCurrentItem() - 1);
@@ -419,16 +400,15 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             dialog.dismiss();
         });
         dialog.findViewById(R.id.replay).setOnClickListener(view -> {
-            dialog.dismiss();
-            game=  new Game(this, true);
+            game = new Game(this, true);
             selectedX = null;
             selectedY = null;
             selection = false;
             updateBar("0");
-            promotion = false;
             whiteTurn = true;
             finishedGame = null;
             repaint();
+            dialog.dismiss();
         });
 
         dialog.show();

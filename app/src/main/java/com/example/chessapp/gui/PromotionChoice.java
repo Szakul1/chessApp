@@ -91,7 +91,7 @@ public class PromotionChoice extends View {
                 board.cancelDialog('Q');
                 break;
             case "01":
-                board.cancelDialog('K');
+                board.cancelDialog('N');
                 break;
             case "10":
                 board.cancelDialog('B');
