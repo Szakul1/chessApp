@@ -15,15 +15,24 @@ public class Game {
     private final Engine engine;
     // r - rook, k - knight, b - bishop, q - queen, a - king p - pawn
     // capital for white lower for black
+//    public char[][] chessBoard = {
+//            {'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'},
+//            {'p', 'p', 'p', ' ', 'p', 'p', 'p', 'p'},
+//            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
+//            {' ', ' ', ' ', 'p', ' ', ' ', ' ', ' '},
+//            {' ', ' ', ' ', ' ', 'P', ' ', ' ', ' '},
+//            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
+//            {'P', 'P', 'P', 'P', ' ', 'P', 'P', 'P'},
+//            {'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'}};
     public char[][] chessBoard = {
-            {'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'},
-            {'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'},
             {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
             {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
             {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
             {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
-            {'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'},
-            {'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'}};
+            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
+            {' ', ' ', ' ', 'k', ' ', ' ', ' ', ' '},
+            {' ', 'q', ' ', ' ', ' ', ' ', ' ', ' '},
+            {' ', ' ', ' ', ' ', ' ', 'K', ' ', ' '}};
     private long[] boards = {0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,};
     private boolean[] castleFlags = {true, true, true, true};
     long columnAB = 217020518514230019L;
@@ -110,6 +119,11 @@ public class Game {
                 possibleMovesB(boards, castleFlags[CBK], castleFlags[CBQ]);
     }
 
+    public String possibleMoves(boolean white, long[] boards, boolean[] castleFlags) {
+        return white ? possibleMovesW(boards, castleFlags[CWK], castleFlags[CWQ]) :
+                possibleMovesB(boards, castleFlags[CBK], castleFlags[CBQ]);
+    }
+
     public void makeRealMove(String move) {
         updateCastling(move, boards, castleFlags);
         boards = makeMove(move, boards);
@@ -173,13 +187,19 @@ public class Game {
         return (getMyPieces(white, boards) & (1L << position)) != 0;
     }
 
-    public void response(boolean white) {
-        int score = engine.findBestMove(boards, castleFlags, white);
+    public int response(boolean white) {
+//        Log.d("test", "value: " + engine.evaluate(boards)+"");
+
+        board.repaint();
+        int score = -engine.findBestMove(boards, castleFlags, white);
+//        Log.d("test", score+"");
         String move = engine.bestMove;
         if (!move.isEmpty()) {
             makeRealMove(move);
+//            Log.d("test", "value: " + engine.evaluate(boards)+"");
         }
         finishGame(move.length(), white);
+        return score;
     }
 
     public boolean checkMoveAndMake(int row, int col, int newRow, int newCol, boolean white) {
@@ -442,7 +462,7 @@ public class Game {
                 + possibleCB(CBK, CBQ);
     }
 
-    private long getMyPieces(boolean white, long[] pieces) {
+    public long getMyPieces(boolean white, long[] pieces) {
         return white ? pieces[WP] | pieces[WN] | pieces[WB] | pieces[WR] | pieces[WQ] | pieces[WK] :
                 pieces[BP] | pieces[BN] | pieces[BB] | pieces[BR] | pieces[BQ] | pieces[BK];
     }

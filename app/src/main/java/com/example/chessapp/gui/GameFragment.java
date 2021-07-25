@@ -1,6 +1,7 @@
 package com.example.chessapp.gui;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,9 +21,11 @@ import java.util.Objects;
 public class GameFragment extends Fragment {
 
     private final boolean twoPlayers;
+    private boolean color;
 
-    public GameFragment(boolean twoPlayers) {
+    public GameFragment(boolean twoPlayers, boolean color) {
         this.twoPlayers = twoPlayers;
+        this.color = color;
     }
 
     @Override
@@ -37,7 +40,7 @@ public class GameFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         LinearLayout linearLayout = requireView().findViewById(R.id.board);
-        Board board = new Board(getActivity(), twoPlayers);
+        Board board = new Board(getActivity(), twoPlayers, color);
         board.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT));

@@ -22,6 +22,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.chessapp.MainActivity;
@@ -40,6 +41,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     private float pieceHeight;
     private final Bitmap pieces;
     private final boolean twoPlayers;
+    private boolean color;
     public Rect[] piecesSource;
     private Game game;
     private Integer selectedX = null, selectedY = null;
@@ -51,15 +53,15 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     private AlertDialog dialog;
     private ProgressBar progressBar;
     private TextView progressText;
-    private boolean promotion = false;
     private String promotionMove;
     private boolean whiteTurn = true;
     public String finishedGame = null;
 
-    public Board(Context context, boolean twoPlayers) {
+    public Board(Context context, boolean twoPlayers, boolean color) {
         super(context);
         pieces = BitmapFactory.decodeResource(context.getResources(), R.drawable.pieces);
         this.twoPlayers = twoPlayers;
+        this.color = color;
         getHolder().addCallback(this);
         this.context = context;
 
@@ -78,7 +80,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             }
         }
         game = new Game(this, true);
-        RelativeLayout viewGroup = (RelativeLayout) getParent().getParent();
+        ConstraintLayout viewGroup = (ConstraintLayout) getParent().getParent();
         progressBar = viewGroup.findViewById(R.id.positionBar);
         progressText = viewGroup.findViewById(R.id.positionValue);
         repaint();
@@ -299,7 +301,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             if (twoPlayers) {
                 whiteTurn = !whiteTurn;
             } else {
-                game.response(!whiteTurn);
+                updateBar(game.response(!whiteTurn));
 //                        updateBar(game.makeMoveAndResponse(move, true));
             }
             game.gameFinished(whiteTurn);
@@ -360,7 +362,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         if (twoPlayers) {
             game.makeRealMove(move);
         } else {
-            game.response(!whiteTurn);
+            updateBar(game.response(!whiteTurn));
             //            updateBar(game.makeMoveAndResponse(move, true));
         }
         game.gameFinished(whiteTurn);
@@ -368,19 +370,9 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     @SuppressLint("SetTextI18n")
-    private void updateBar(String value) {
-        int val;
-        if (value.equals("Black")) {
-            val = 0;
-            finishedGame = value;
-        } else if (value.equals("White")) {
-            val = Integer.MAX_VALUE;
-            finishedGame = value;
-        } else {
-            val = -Integer.parseInt(value);
-        }
-        progressText.setText("" + val);
-        ObjectAnimator.ofInt(progressBar, "progress", val / 2 + 500000)
+    private void updateBar(int value) {
+        progressText.setText("" + value);
+        ObjectAnimator.ofInt(progressBar, "progress", value / 2 + 10000)
                 .setDuration(600)
                 .start();
     }
@@ -404,7 +396,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             selectedX = null;
             selectedY = null;
             selection = false;
-            updateBar("0");
+            updateBar(0);
             whiteTurn = true;
             finishedGame = null;
             repaint();
