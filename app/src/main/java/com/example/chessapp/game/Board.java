@@ -301,8 +301,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             if (twoPlayers) {
                 whiteTurn = !whiteTurn;
             } else {
-                updateBar(game.response(!whiteTurn));
-//                        updateBar(game.makeMoveAndResponse(move, true));
+                game.response(!whiteTurn);
             }
             game.gameFinished(whiteTurn);
 
@@ -362,16 +361,19 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         if (twoPlayers) {
             game.makeRealMove(move);
         } else {
-            updateBar(game.response(!whiteTurn));
-            //            updateBar(game.makeMoveAndResponse(move, true));
+            game.response(!whiteTurn);
         }
         game.gameFinished(whiteTurn);
         repaint();
     }
 
     @SuppressLint("SetTextI18n")
-    private void updateBar(int value) {
-        progressText.setText("" + value);
+    public void updateBar(int value, int mate) {
+        if (mate == -1) {
+            progressText.setText("" + value);
+        } else {
+            progressText.setText("Mate in " + mate);
+        }
         ObjectAnimator.ofInt(progressBar, "progress", value / 2 + 10000)
                 .setDuration(600)
                 .start();
@@ -396,7 +398,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             selectedX = null;
             selectedY = null;
             selection = false;
-            updateBar(0);
+            updateBar(0, -1);
             whiteTurn = true;
             finishedGame = null;
             repaint();

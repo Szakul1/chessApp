@@ -15,24 +15,24 @@ public class Game {
     private final Engine engine;
     // r - rook, k - knight, b - bishop, q - queen, a - king p - pawn
     // capital for white lower for black
-//    public char[][] chessBoard = {
-//            {'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'},
-//            {'p', 'p', 'p', ' ', 'p', 'p', 'p', 'p'},
-//            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
-//            {' ', ' ', ' ', 'p', ' ', ' ', ' ', ' '},
-//            {' ', ' ', ' ', ' ', 'P', ' ', ' ', ' '},
-//            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
-//            {'P', 'P', 'P', 'P', ' ', 'P', 'P', 'P'},
-//            {'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'}};
     public char[][] chessBoard = {
+            {'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'},
+            {'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'},
             {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
             {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
             {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
             {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
-            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
-            {' ', ' ', ' ', 'k', ' ', ' ', ' ', ' '},
-            {' ', 'q', ' ', ' ', ' ', ' ', ' ', ' '},
-            {' ', ' ', ' ', ' ', ' ', 'K', ' ', ' '}};
+            {'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'},
+            {'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'}};
+//    public char[][] chessBoard = {
+//            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
+//            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
+//            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
+//            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
+//            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
+//            {' ', ' ', ' ', 'k', ' ', ' ', ' ', ' '},
+//            {' ', ' ', 'q', ' ', ' ', ' ', ' ', ' '},
+//            {' ', ' ', ' ', ' ', ' ', 'K', ' ', ' '}};
     private long[] boards = {0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,};
     private boolean[] castleFlags = {true, true, true, true};
     long columnAB = 217020518514230019L;
@@ -187,19 +187,17 @@ public class Game {
         return (getMyPieces(white, boards) & (1L << position)) != 0;
     }
 
-    public int response(boolean white) {
-//        Log.d("test", "value: " + engine.evaluate(boards)+"");
-
+    public void response(boolean white) {
         board.repaint();
+
         int score = -engine.findBestMove(boards, castleFlags, white);
-//        Log.d("test", score+"");
         String move = engine.bestMove;
+
         if (!move.isEmpty()) {
             makeRealMove(move);
-//            Log.d("test", "value: " + engine.evaluate(boards)+"");
         }
         finishGame(move.length(), white);
-        return score;
+        board.updateBar(score, engine.mate);
     }
 
     public boolean checkMoveAndMake(int row, int col, int newRow, int newCol, boolean white) {
@@ -462,7 +460,7 @@ public class Game {
                 + possibleCB(CBK, CBQ);
     }
 
-    public long getMyPieces(boolean white, long[] pieces) {
+    public static long getMyPieces(boolean white, long[] pieces) {
         return white ? pieces[WP] | pieces[WN] | pieces[WB] | pieces[WR] | pieces[WQ] | pieces[WK] :
                 pieces[BP] | pieces[BN] | pieces[BB] | pieces[BR] | pieces[BQ] | pieces[BK];
     }
@@ -744,7 +742,7 @@ public class Game {
         return unsafe;
     }
 
-    private long getOccupied(long[] pieces) {
+    public static long getOccupied(long[] pieces) {
         long occupied = 0L;
         for (int i = 0; i < pieces.length - 1; i++)
             occupied |= pieces[i];
