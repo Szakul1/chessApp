@@ -44,6 +44,6 @@ public class GameFragment extends Fragment {
         board.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT));
-        linearLayout.addView(board);
+        linearLayout.addView(board, 1);
     }
 }

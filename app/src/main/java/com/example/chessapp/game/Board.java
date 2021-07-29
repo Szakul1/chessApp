@@ -15,7 +15,10 @@ import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
@@ -33,6 +36,7 @@ import com.example.chessapp.gui.PromotionChoice;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Handler;
 
 @SuppressLint("ViewConstructor")
 public class Board extends SurfaceView implements SurfaceHolder.Callback {
@@ -56,6 +60,12 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     private String promotionMove;
     private boolean whiteTurn = true;
     public String finishedGame = null;
+    private boolean analyzing = false;
+    private Button forwardButton;
+    private Button backButton;
+    private Dialog endDialog;
+    private LinearLayout analyzeDesk;
+    private WindowManager.LayoutParams lp;
 
     public Board(Context context, boolean twoPlayers, boolean color) {
         super(context);
@@ -80,9 +90,12 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             }
         }
         game = new Game(this, true);
-        ConstraintLayout viewGroup = (ConstraintLayout) getParent().getParent();
+        LinearLayout viewGroup = (LinearLayout) getParent();
         progressBar = viewGroup.findViewById(R.id.positionBar);
         progressText = viewGroup.findViewById(R.id.positionValue);
+        forwardButton = viewGroup.findViewById(R.id.forwardAnalyze);
+        backButton = viewGroup.findViewById(R.id.backAnalyze);
+        analyzeDesk = (LinearLayout) viewGroup.findViewById(R.id.analyze_desk);
         repaint();
     }
 
@@ -271,6 +284,9 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if (analyzing) {
+            return false;
+        }
         if (finishedGame != null) {
             showEndDialog();
             return false;
@@ -344,13 +360,16 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         alertDialogBuilder.setView(layout);
         alertDialogBuilder.setCancelable(false);
         dialog = alertDialogBuilder.create();
-        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
+        setParams(dialog);
+    }
+
+    private void setParams(Dialog dialog) {
+        lp = new WindowManager.LayoutParams();
         lp.copyFrom(dialog.getWindow().getAttributes());
         lp.width = WindowManager.LayoutParams.MATCH_PARENT;
         lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
         dialog.show();
         dialog.getWindow().setAttributes(lp);
-
     }
 
     public void cancelDialog(char piece) {
@@ -380,35 +399,49 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     public void showEndDialog() {
-        Dialog dialog = new Dialog(context);
-        dialog.setContentView(R.layout.end_dialog);
-        dialog.setTitle("Game finished");
-        ((TextView) dialog.findViewById(R.id.result)).setText(finishedGame);
-        dialog.findViewById(R.id.back).setOnClickListener(view -> {
+        endDialog = new Dialog(context);
+        endDialog.setContentView(R.layout.end_dialog);
+        endDialog.setTitle("Game finished");
+        ((TextView) endDialog.findViewById(R.id.result)).setText(finishedGame);
+        endDialog.findViewById(R.id.back).setOnClickListener(view -> {
             ViewPager2 viewPager2 = ((MainActivity) getContext()).getViewPager2();
             viewPager2.setCurrentItem(viewPager2.getCurrentItem() - 1);
-            dialog.dismiss();
+            endDialog.dismiss();
         });
-        dialog.findViewById(R.id.analyzeButton).setOnClickListener(view -> {
+        endDialog.findViewById(R.id.analyzeButton).setOnClickListener(view -> {
             analyze();
-            dialog.dismiss();
         });
-        dialog.findViewById(R.id.replay).setOnClickListener(view -> {
+        endDialog.findViewById(R.id.replay).setOnClickListener(view -> {
             game = new Game(this, true);
             selectedX = null;
             selectedY = null;
             selection = false;
             updateBar(0, -1);
+            analyzing = false;
             whiteTurn = true;
             finishedGame = null;
             repaint();
-            dialog.dismiss();
+            endDialog.dismiss();
         });
 
-        dialog.show();
+        setParams(endDialog);
     }
 
     private void analyze() {
+        endDialog.findViewById(R.id.end_normal).setVisibility(GONE);
+        endDialog.findViewById(R.id.end_analyze).setVisibility(VISIBLE);
+        analyzeDesk.setVisibility(VISIBLE);
+        endDialog.getWindow().setAttributes(lp);
+        analyzing = true;
+        LinearLayout viewGroup = (LinearLayout) getParent();
+        ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) viewGroup.getLayoutParams();
+        params.verticalBias = 0.0f;
+        viewGroup.setLayoutParams(params);
+
+        new Thread(() -> {
+            game.startAnalyze(true, endDialog.findViewById(R.id.loading_bar));
+            endDialog.dismiss();
+        }).start();
     }
 
 }

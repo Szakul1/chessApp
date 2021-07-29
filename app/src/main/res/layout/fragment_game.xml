@@ -7,55 +7,175 @@
     android:padding="10sp"
     tools:context=".gui.GameFragment">
 
-    <ProgressBar
-        android:id="@+id/positionBar"
-        style="@android:style/Widget.ProgressBar.Horizontal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/board"
-        android:max="20000"
-        android:progress="10000"
-        android:progressBackgroundTint="@color/black"
-        android:progressTint="@color/white"
-        android:scaleY="2"
-        app:layout_constraintBottom_toTopOf="@+id/board"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.157"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.9" />
-
-    <TextView
-        android:id="@+id/positionValue"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignStart="@id/positionBar"
-        android:layout_alignEnd="@id/positionBar"
-        android:layout_alignBottom="@id/positionBar"
-        android:text="0.00"
-        android:textAlignment="center"
-        android:textColor="@color/grey"
-        android:textSize="25sp"
-        app:layout_constraintBottom_toTopOf="@+id/board"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.9"/>
-
     <LinearLayout
         android:id="@+id/board"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/positionConstraint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <ProgressBar
+                android:id="@+id/positionBar"
+                style="@android:style/Widget.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="20000"
+                android:progress="10000"
+                android:progressBackgroundTint="@color/black"
+                android:progressTint="@color/white"
+                android:scaleY="2"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/positionValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignStart="@id/positionBar"
+                android:layout_alignEnd="@id/positionBar"
+                android:layout_alignBottom="@id/positionBar"
+                android:text="0.00"
+                android:textAlignment="center"
+                android:textColor="@color/grey"
+                android:textSize="25sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"/>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <LinearLayout
+            android:id="@+id/analyze_desk"
+            android:visibility="gone"
+            android:background="@drawable/light_wood"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="150sp">
+
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:textColor="@color/black"
+                    android:layout_margin="5sp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Best move: "
+                    android:textSize="20sp"
+                    />
+
+                <TextView
+                    android:id="@+id/best_value"
+                    android:textColor="@color/black"
+                    android:padding="5sp"
+                    android:layout_margin="5sp"
+                    android:background="@color/white"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="+1.00"
+                    android:textSize="20sp"
+                    />
+
+                <TextView
+                    android:id="@+id/best_move"
+                    android:textColor="@color/black"
+                    android:layout_margin="5sp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="a5h4"
+                    android:textSize="20sp"
+                    />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:textColor="@color/black"
+                    android:layout_margin="5sp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Actual move: "
+                    android:textSize="20sp"
+                    />
+
+                <TextView
+                    android:id="@+id/actual_value"
+                    android:textColor="@color/black"
+                    android:padding="5sp"
+                    android:layout_margin="5sp"
+                    android:background="@color/white"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="+1.00"
+                    android:textSize="20sp"
+                    />
+
+                <TextView
+                    android:id="@+id/actual_move"
+                    android:textColor="@color/black"
+                    android:layout_margin="5sp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="a5h4"
+                    android:textSize="20sp"
+                    />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:gravity="center_horizontal"
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <Button
+                    android:layout_margin="5sp"
+                    android:text="back"
+                    android:id="@+id/backAnalyze"
+                    android:textColor="@color/white"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/black"
+                    android:drawableLeft="@drawable/ic_baseline_undo_24"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+
+                <Button
+                    android:layout_margin="5sp"
+                    android:text="next"
+                    android:id="@+id/forwardAnalyze"
+                    android:textColor="@color/white"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/black"
+                    android:drawableLeft="@drawable/ic_baseline_redo_24"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
 
     <Button
-        android:onClick="showProgress"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:backgroundTint="@color/black"
+        android:onClick="showProgress"
         android:text="Hide\nposition"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

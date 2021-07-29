@@ -1,6 +1,7 @@
 package com.example.chessapp.game.logic;
 
 import android.util.Log;
+import android.widget.ProgressBar;
 
 import static com.example.chessapp.game.logic.BitBoards.*;
 
@@ -15,7 +16,7 @@ public class Game {
     private final Engine engine;
     // r - rook, k - knight, b - bishop, q - queen, a - king p - pawn
     // capital for white lower for black
-    public char[][] chessBoard = {
+    private final char[][] startingBoard = {
             {'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'},
             {'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'},
             {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
@@ -24,6 +25,7 @@ public class Game {
             {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
             {'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'},
             {'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'}};
+    public char[][] chessBoard;
 //    public char[][] chessBoard = {
 //            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
 //            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
@@ -59,7 +61,12 @@ public class Game {
                     0x8040201008040201L, 0x4020100804020100L, 0x2010080402010000L, 0x1008040201000000L,
                     0x804020100000000L, 0x402010000000000L, 0x201000000000000L, 0x100000000000000L};
 
+    public String moveHistory = "";
+
     private void arrayToBitboards() {
+        boards = new  long[]{0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,};
+        castleFlags = new boolean[] {true, true, true, true};
+        chessBoard = startingBoard;
         long binary = 1L;
         for (int i = 0; i < 64; i++) {
             switch (chessBoard[i / 8][i % 8]) {
@@ -108,10 +115,6 @@ public class Game {
         this.board = board;
         arrayToBitboards();
         engine = new Engine(this);
-//        if (!white) {
-//            makeMove(engine.alphaBeta(Engine.globalDepth, Integer.MAX_VALUE, Integer.MIN_VALUE,
-//                    "", -1, false));
-//        }
     }
 
     public String possibleMoves(boolean white) {
@@ -127,6 +130,11 @@ public class Game {
     public void makeRealMove(String move) {
         updateCastling(move, boards, castleFlags);
         boards = makeMove(move, boards);
+        moveHistory += move + updateBoard(move);
+    }
+
+    public char updateBoard(String move) {
+        char piece = ' ';
         int row = getValFromString(move, 0), col = getValFromString(move, 1);
         if (Character.isDigit(move.charAt(3))) {// 'regular' move
             if ("0402".equals(move) || "7472".equals(move)) {
@@ -138,19 +146,56 @@ public class Game {
                 chessBoard[getValFromString(move, 0)][7] = ' ';
             }
             int rowNew = getValFromString(move, 2), colNew = getValFromString(move, 3);
+            piece = chessBoard[rowNew][colNew];
             chessBoard[rowNew][colNew] = chessBoard[row][col];
             chessBoard[row][col] = ' ';
         } else {
             boolean white = Character.isUpperCase(move.charAt(2));
             if (move.charAt(3) == 'P') {
+                piece = chessBoard[white ? 0 : 7][col];
                 chessBoard[white ? 0 : 7][col] = move.charAt(2);
                 chessBoard[white ? 1 : 6][row] = ' ';
             } else {
+                piece = chessBoard[white ? 3 : 4][col];
                 chessBoard[white ? 2 : 5][col] = chessBoard[white ? 3 : 4][row];
                 chessBoard[white ? 3 : 4][row] = ' ';
                 chessBoard[white ? 3 : 4][col] = ' ';
             }
         }
+        return piece;
+    }
+
+    public void undoMove(String move, char piece) {
+        int row = getValFromString(move, 0), col = getValFromString(move, 1);
+        if (Character.isDigit(move.charAt(3))) {// 'regular' move
+            if ("0402".equals(move) || "7472".equals(move)) { // rook move
+                chessBoard[getValFromString(move, 0)][0] = chessBoard[getValFromString(move, 0)][3];
+                chessBoard[getValFromString(move, 0)][3] = ' ';
+            }
+            else if ("0406".equals(move) || "7476".equals(move)) {
+                chessBoard[getValFromString(move, 0)][7] = chessBoard[getValFromString(move, 0)][5];
+                chessBoard[getValFromString(move, 0)][5] = ' ';
+            }
+            int rowNew = getValFromString(move, 2), colNew = getValFromString(move, 3);
+            chessBoard[row][col] = chessBoard[rowNew][colNew];
+            chessBoard[rowNew][colNew] = piece;
+        } else {
+            boolean white = Character.isUpperCase(move.charAt(2));
+            if (move.charAt(3) == 'P') {
+                chessBoard[white ? 1 : 6][row] = chessBoard[white ? 0 : 7][col];
+                chessBoard[white ? 0 : 7][col] = piece;
+            } else {
+                chessBoard[white ? 3 : 4][row] = chessBoard[white ? 2 : 5][col];
+                chessBoard[white ? 3 : 4][col] = piece;
+                chessBoard[white ? 2 : 5][col] = ' ';
+            }
+        }
+    }
+
+    public void startAnalyze(boolean white, ProgressBar bar) {
+        arrayToBitboards();
+        Analyze analyze = new Analyze(this, engine);
+        analyze.analyzeGame(moveHistory, boards, castleFlags, white, bar);
     }
 
     public long[] makeMove(String move, long[] pieces) {

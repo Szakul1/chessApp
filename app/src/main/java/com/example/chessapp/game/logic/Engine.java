@@ -12,7 +12,7 @@ import static com.example.chessapp.game.logic.BitBoards.*;
 
 public class Engine {
     private final Game game;
-    public final static int globalDepth = 6;
+    public static int globalDepth = 4;
     private final static int mateScore = 49000;
     private final static int infinity = 50000;
     private final Rating rating;

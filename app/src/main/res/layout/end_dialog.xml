@@ -5,6 +5,41 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
+    <LinearLayout
+        android:id="@+id/end_analyze"
+        android:visibility="gone"
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+    <TextView
+        android:textColor="@color/white"
+        android:layout_marginVertical="40sp"
+        android:textSize="40sp"
+        android:text="Loading..."
+        android:textAlignment="center"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        />
+
+    <ProgressBar
+        android:layout_marginBottom="5sp"
+        android:progressTint="@color/teal_200"
+        android:id="@+id/loading_bar"
+        android:max="100"
+        android:paddingHorizontal="30sp"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/end_normal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
     <TextView
         android:textColor="@color/white"
         android:layout_marginVertical="40sp"
@@ -48,6 +83,8 @@
             android:backgroundTint="@color/black"
             android:id="@+id/replay"
             android:text="replay" />
+
+    </LinearLayout>
 
     </LinearLayout>
 
