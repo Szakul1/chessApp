@@ -12,7 +12,7 @@ import static com.example.chessapp.game.logic.BitBoards.*;
 
 public class Engine {
     private final Game game;
-    public static int globalDepth = 4;
+    public int globalDepth = 4;
     private final static int mateScore = 49000;
     private final static int infinity = 50000;
     private final Rating rating;
@@ -22,6 +22,10 @@ public class Engine {
     public Engine(Game game) {
         this.game = game;
         rating = new Rating();
+    }
+
+    public int scoreMove(long[] boards, boolean[] castleFlags, boolean white) {
+        return alphaBeta(-infinity, infinity, globalDepth - 1, boards, castleFlags, white);
     }
 
     public int findBestMove(long[] boards, boolean[] castleFlags, boolean white) {

@@ -23,7 +23,7 @@
         />
 
     <ProgressBar
-        android:layout_marginBottom="5sp"
+        android:layout_marginBottom="20sp"
         android:progressTint="@color/teal_200"
         android:id="@+id/loading_bar"
         android:max="100"

@@ -1,6 +1,10 @@
 package com.example.chessapp.game.logic;
 
+import android.util.Log;
 import android.widget.ProgressBar;
+import android.widget.TextView;
+
+import java.util.Arrays;
 
 public class Analyze {
 
@@ -18,7 +22,6 @@ public class Analyze {
     }
 
     public void analyzeGame(String moves, long[] boards, boolean[] castleFlags, boolean white, ProgressBar bar) {
-        engine.globalDepth = 6;
         bar.setMax(moves.length());
         this.moves = moves;
         moveScores = new int[moves.length() / 5];
@@ -27,34 +30,44 @@ public class Analyze {
 
         for (int i = 0; i < moves.length(); i += 5) {
             int score = engine.findBestMove(boards, castleFlags, white);
-            bestMoves[i / 5] = engine.bestMove;
             score = white ? score : -score;
-            if (i != 0) {
-                moveScores[i / 5 - 1] = -score;
-            }
+            bestMoves[i / 5] = engine.bestMove;
             bestScores[i / 5] = score;
             String move = moves.substring(i, i + 4);
-            game.makeMove(move, boards);
+            boards = game.makeMove(move, boards);
             game.updateCastling(move, boards, castleFlags);
             white = !white;
+            score = engine.scoreMove(boards, castleFlags, white);
+            score = white ? score : -score;
+            moveScores[i / 5] = score;
             bar.setProgress(i);
         }
-        moveScores[moveScores.length - 1] = engine.findBestMove(boards, castleFlags, white);
+        Log.d("test", "best: "+ Arrays.toString(bestScores));
+        Log.d("test", "actual: "+Arrays.toString(moveScores));
     }
 
-    public void moveForward() {
+    public String getMove(int index) {
+        return moves.substring(index, index + 4);
+    }
+
+    public int moveForward() {
         int index = currentMove * 5;
-        if (index + 5 >= moves.length() - 1)
-            return;
-        game.updateBoard(moves.substring(index, index + 4));
+        if (index + 5 > moves.length())
+            return -1;
+        game.updateBoard(getMove(index));
         currentMove++;
+        return currentMove - 1;
     }
 
-    public void moveBack() {
+    public int moveBack() {
         if (currentMove == 0)
-            return;
-        int index = currentMove * 5;
-        game.undoMove(moves.substring(index, index + 4), moves.charAt(index + 4));
+            return -1;
         currentMove--;
+        int index = currentMove * 5;
+        game.undoMove(getMove(index), moves.charAt(index + 4));
+        if (currentMove == 0) {
+            return -2;
+        }
+        return currentMove - 1;
     }
 }

@@ -13,8 +13,10 @@ public class Zobrist {
         initRandomKeys();
     }
 
-//    public long hashPiece(int hashKey, ) {
-//
+//    public long hashPiece(int hashKey, int board, int square, int target, int captureBoard) {
+//        hashKey ^= pieceKeys[board][square];
+//        hashKey ^= pieceKeys[board][target];
+//        hashKey ^= pieceKeys[captureBoard][target];
 //    }
 
     private void initRandomKeys() {

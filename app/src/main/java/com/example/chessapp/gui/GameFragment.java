@@ -45,5 +45,8 @@ public class GameFragment extends Fragment {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT));
         linearLayout.addView(board, 1);
+        if (!color) {
+            board.setRotation(180);
+        }
     }
 }

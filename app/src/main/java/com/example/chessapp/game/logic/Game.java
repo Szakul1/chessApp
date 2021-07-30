@@ -10,6 +10,7 @@ import androidx.appcompat.widget.WithHint;
 import com.example.chessapp.game.Board;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
 
 public class Game {
     private final Board board;
@@ -25,8 +26,9 @@ public class Game {
             {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
             {'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'},
             {'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'}};
+    private final Zobrist zobrist;
     public char[][] chessBoard;
-//    public char[][] chessBoard = {
+    //    public char[][] chessBoard = {
 //            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
 //            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
 //            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
@@ -64,9 +66,9 @@ public class Game {
     public String moveHistory = "";
 
     private void arrayToBitboards() {
-        boards = new  long[]{0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,};
-        castleFlags = new boolean[] {true, true, true, true};
-        chessBoard = startingBoard;
+        boards = new long[]{0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,};
+        castleFlags = new boolean[]{true, true, true, true};
+        resetBoard();
         long binary = 1L;
         for (int i = 0; i < 64; i++) {
             switch (chessBoard[i / 8][i % 8]) {
@@ -111,10 +113,17 @@ public class Game {
         }
     }
 
-    public Game(Board board, boolean white) {
+    private void resetBoard() {
+        chessBoard = new char[8][8];
+        for (int i = 0; i < startingBoard.length; i++)
+            chessBoard[i] = Arrays.copyOf(startingBoard[i], startingBoard.length);
+    }
+
+    public Game(Board board) {
         this.board = board;
         arrayToBitboards();
         engine = new Engine(this);
+        zobrist = new Zobrist();
     }
 
     public String possibleMoves(boolean white) {
@@ -127,9 +136,12 @@ public class Game {
                 possibleMovesB(boards, castleFlags[CBK], castleFlags[CBQ]);
     }
 
-    public void makeRealMove(String move) {
+    public void makeRealMove(String move, boolean white) {
+        //debugging
+        Log.d("test", zobrist.generateHashKey(boards, castleFlags, white) + "");
         updateCastling(move, boards, castleFlags);
         boards = makeMove(move, boards);
+        Log.d("test", zobrist.generateHashKey(boards, castleFlags, white) + "");
         moveHistory += move + updateBoard(move);
     }
 
@@ -140,8 +152,7 @@ public class Game {
             if ("0402".equals(move) || "7472".equals(move)) {
                 chessBoard[getValFromString(move, 0)][3] = chessBoard[getValFromString(move, 0)][0];
                 chessBoard[getValFromString(move, 0)][0] = ' ';
-            }
-            else if ("0406".equals(move) || "7476".equals(move)) {
+            } else if ("0406".equals(move) || "7476".equals(move)) {
                 chessBoard[getValFromString(move, 0)][5] = chessBoard[getValFromString(move, 0)][7];
                 chessBoard[getValFromString(move, 0)][7] = ' ';
             }
@@ -171,8 +182,7 @@ public class Game {
             if ("0402".equals(move) || "7472".equals(move)) { // rook move
                 chessBoard[getValFromString(move, 0)][0] = chessBoard[getValFromString(move, 0)][3];
                 chessBoard[getValFromString(move, 0)][3] = ' ';
-            }
-            else if ("0406".equals(move) || "7476".equals(move)) {
+            } else if ("0406".equals(move) || "7476".equals(move)) {
                 chessBoard[getValFromString(move, 0)][7] = chessBoard[getValFromString(move, 0)][5];
                 chessBoard[getValFromString(move, 0)][5] = ' ';
             }
@@ -192,16 +202,18 @@ public class Game {
         }
     }
 
-    public void startAnalyze(boolean white, ProgressBar bar) {
+    public Analyze startAnalyze(boolean white, ProgressBar bar) {
         arrayToBitboards();
         Analyze analyze = new Analyze(this, engine);
         analyze.analyzeGame(moveHistory, boards, castleFlags, white, bar);
+        resetBoard();
+        return analyze;
     }
 
     public long[] makeMove(String move, long[] pieces) {
         long tempWR = makeMoveForBoard(pieces[WR], move, 'R');
         long tempBR = makeMoveForBoard(pieces[BR], move, 'r');
-        return new long[] {
+        return new long[]{
                 makeMoveForBoard(pieces[WP], move, 'P'),
                 makeMoveForBoard(pieces[WN], move, 'N'),
                 makeMoveForBoard(pieces[WB], move, 'B'),
@@ -235,11 +247,12 @@ public class Game {
     public void response(boolean white) {
         board.repaint();
 
-        int score = -engine.findBestMove(boards, castleFlags, white);
+        int score = engine.findBestMove(boards, castleFlags, white);
+        score = white ? score : -score;
         String move = engine.bestMove;
 
         if (!move.isEmpty()) {
-            makeRealMove(move);
+            makeRealMove(move, white);
         }
         finishGame(move.length(), white);
         board.updateBar(score, engine.mate);
@@ -269,7 +282,7 @@ public class Game {
         if (movesContains(move, possibleMoves)) {
             long[] temp = makeMove(move, boards);
             if (kingSafe(white, temp)) {
-                makeRealMove(move);
+                makeRealMove(move, white);
                 return true;
             }
         }
@@ -337,6 +350,10 @@ public class Game {
             }
         }
     }
+
+    /*
+        Game logic
+     */
 
     private boolean movesContains(String move, String moves) {
         for (int i = 0; i < moves.length(); i += 4) {

@@ -49,6 +49,12 @@ public class MainActivity extends AppCompatActivity {
             startGame(false);
             dialog.dismiss();
         });
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
+        lp.copyFrom(dialog.getWindow().getAttributes());
+        lp.width = WindowManager.LayoutParams.MATCH_PARENT;
+        lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        dialog.show();
+        dialog.getWindow().setAttributes(lp);
         dialog.show();
     }
 
@@ -61,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void gameWithPlayer(View view) {
         pagerAdapter.setTwoPlayers(true);
+        pagerAdapter.setColor(true);
         viewPager2.setAdapter(pagerAdapter);
         viewPager2.setCurrentItem(1);
     }
