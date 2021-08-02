@@ -22,29 +22,33 @@ public class Analyze {
         this.engine = engine;
     }
 
-    public void analyzeGame(String moves, long[] boards, boolean[] castleFlags, boolean white, ProgressBar bar) {
+    public void analyzeGame(String moves, long[] boards, boolean[] castleFlags, boolean white,
+                            ProgressBar bar, Zobrist zobrist) {
         bar.setMax(moves.length());
         this.moves = moves;
         moveScores = new int[moves.length() / 5];
         bestScores = new int[moves.length() / 5];
         bestMoves = new String[moves.length() / 5];
 
+        long hashKey = zobrist.generateHashKey(boards, castleFlags, white);
+
         for (int i = 0; i < moves.length(); i += 5) {
-            int score = engine.findBestMove(boards, castleFlags, white);
+            int score = engine.findBestMove(boards, castleFlags, white, hashKey);
             score = white ? score : -score;
             bestMoves[i / 5] = engine.bestMove;
             bestScores[i / 5] = score;
             String move = moves.substring(i, i + 4);
-            boards = game.makeMove(move, boards);
+            hashKey = zobrist.hashPiece(hashKey, move, boards, castleFlags, white);
             castleFlags = game.updateCastling(move, boards, castleFlags);
+            boards = game.makeMove(move, boards);
             white = !white;
-            score = engine.scoreMove(boards, castleFlags, white);
+            score = engine.scoreMove(boards, castleFlags, white, hashKey);
             score = white ? score : -score;
             moveScores[i / 5] = score;
             bar.setProgress(i);
         }
-        Log.d("test", "best: "+ Arrays.toString(bestScores));
-        Log.d("test", "actual: "+Arrays.toString(moveScores));
+        Log.d("test", "best: " + Arrays.toString(bestScores));
+        Log.d("test", "actual: " + Arrays.toString(moveScores));
     }
 
     public String getMove(int index) {

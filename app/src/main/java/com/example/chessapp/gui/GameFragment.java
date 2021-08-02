@@ -1,7 +1,5 @@
 package com.example.chessapp.gui;
 
-import android.content.Context;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,10 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.example.chessapp.R;
-import com.example.chessapp.game.Board;
-import com.example.chessapp.game.logic.Game;
-
-import java.util.Objects;
+import com.example.chessapp.game.frontend.Board;
 
 public class GameFragment extends Fragment {
 
@@ -38,15 +33,11 @@ public class GameFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
         LinearLayout linearLayout = requireView().findViewById(R.id.board);
         Board board = new Board(getActivity(), twoPlayers, color);
         board.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT));
         linearLayout.addView(board, 1);
-        if (!color) {
-            board.setRotation(180);
-        }
     }
 }

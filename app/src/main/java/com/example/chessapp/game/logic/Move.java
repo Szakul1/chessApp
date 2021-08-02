@@ -68,7 +68,7 @@ public class Move {
                 return i;
             }
         }
-        // error
+        // empty
         return -1;
     }
 }

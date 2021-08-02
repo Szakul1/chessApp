@@ -11,7 +11,7 @@ import static com.example.chessapp.game.logic.BitBoards.*;
 public class Engine {
     private final Game game;
     private final Zobrist zobrist;
-    public static int globalDepth = 6;
+    public static int globalDepth = 4;
     private final static int mateScore = 49000;
     private final static int infinity = 50000;
     private final Rating rating;
@@ -26,20 +26,21 @@ public class Engine {
         rating = new Rating();
     }
 
-    public int scoreMove(long[] boards, boolean[] castleFlags, boolean white) {
-        return alphaBeta(-infinity, infinity, globalDepth - 1, boards, castleFlags, white, 0); //TODO hashKey
+    public int scoreMove(long[] boards, boolean[] castleFlags, boolean white, long hashKey) {
+        return alphaBeta(-infinity, infinity, globalDepth - 1, boards, castleFlags, white, hashKey);
     }
 
-    public int findBestMove(long[] boards, boolean[] castleFlags, boolean white) {
+    public int findBestMove(long[] boards, boolean[] castleFlags, boolean white, long hashKey) {
         bestMove = "";
         mate = -1;
         nodes = 0;
         test = 0;
         depth0 = 0;
         int score=0;
-        for (int i = 1; i <= globalDepth; i++) {
+        // TODO iterative deepening
+        for (int i = globalDepth; i <= globalDepth; i++) {
             nodes = 0;
-            score = alphaBeta(-infinity, infinity, i, boards, castleFlags, white, game.hashKey);
+            score = alphaBeta(-infinity, infinity, i, boards, castleFlags, white, hashKey);
             Log.d("test", "nodes: " + nodes);
         }
         if (Math.abs(score) >= mateScore - globalDepth) {
@@ -56,12 +57,17 @@ public class Engine {
     int depth0 = 0;
     int test = 0;
 
-    private int alphaBeta(int alpha, int beta, int depth, long[] boards, boolean[] castleFlags, boolean white, long hashKey) {
+    private int alphaBeta(int alpha, int beta, int depth, long[] boards, boolean[] castleFlags,
+                          boolean white, long hashKey) {
         int hashFlag = hash_alpha;
         int score;
         if (table.containsKey(hashKey)) {
-            Integer val = table.get(hashKey).readEntry(alpha, beta, depth);
+            TranspositionTable tt = table.get(hashKey);
+            Integer val = tt.readEntry(alpha, beta, depth);
             if (val != null) {
+                if (depth == globalDepth) {
+                    this.bestMove = tt.best;
+                }
                 return val;
             } else {
                 test++;
@@ -91,7 +97,7 @@ public class Engine {
             long[] nextBoards = game.makeMove(move, boards);
 
             legalMoves++;
-            boolean[] nextFlags = game.updateCastling(move, nextBoards, castleFlags);
+            boolean[] nextFlags = game.updateCastling(move, boards, castleFlags);
             score = -alphaBeta(-beta, -alpha, depth - 1, nextBoards, nextFlags, !white, newHashKey);
 
             if (score > alpha) {

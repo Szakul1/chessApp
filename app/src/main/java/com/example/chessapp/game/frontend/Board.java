@@ -1,4 +1,4 @@
-package com.example.chessapp.game;
+package com.example.chessapp.game.frontend;
 
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
@@ -11,6 +11,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.media.MediaPlayer;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -29,7 +31,6 @@ import com.example.chessapp.MainActivity;
 import com.example.chessapp.R;
 import com.example.chessapp.game.logic.engine.Analyze;
 import com.example.chessapp.game.logic.Game;
-import com.example.chessapp.gui.PromotionChoice;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -38,35 +39,46 @@ import java.util.concurrent.TimeUnit;
 @SuppressLint("ViewConstructor")
 public class Board extends SurfaceView implements SurfaceHolder.Callback {
     private final static int boardSize = 8;
+    private Game game;
+    private final Context context;
+
+    // drawable values
     private float pieceWidth;
     private float pieceHeight;
     private final Bitmap pieces;
+    public Rect[] piecesSource;
+
+    // flags
     private final boolean twoPlayers;
     private boolean color;
-    public Rect[] piecesSource;
-    private Game game;
-    private Integer selectedX = null, selectedY = null;
-    private boolean selection = false;
-    private String moves = "";
-    private boolean animation = false;
+    private Integer selectedX, selectedY;
+    private boolean selection;
+    private boolean animation;
     private float animationX, animationY;
-    private final Context context;
+    private boolean analyzing;
+    private String promotionMove;
+    private boolean whiteTurn;
+    public String finishedGame;
+    private String moves;
+
+    // components
+    private WindowManager.LayoutParams lp;
     private AlertDialog dialog;
     private ProgressBar progressBar;
     private TextView progressText;
-    private String promotionMove;
-    private boolean whiteTurn = true;
-    public String finishedGame = null;
-    private boolean analyzing = false;
     private Button forwardButton;
     private Button backButton;
     private Dialog endDialog;
     private LinearLayout analyzeDesk;
-    private WindowManager.LayoutParams lp;
     private TextView bestScore;
     private TextView bestMove;
     private TextView actualScore;
     private TextView actualMove;
+    private LinearLayout viewGroup;
+    private ConstraintLayout.LayoutParams params;
+    private MediaPlayer capture;
+    private MediaPlayer slide;
+
 
     public Board(Context context, boolean twoPlayers, boolean color) {
         super(context);
@@ -85,15 +97,20 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         int pieceImageSize = pieces.getHeight() / 2;
         pieceWidth = getWidth() / (float) boardSize;
         pieceHeight = getHeight() / (float) boardSize;
-        piecesSource = new Rect[12];
+        piecesSource = new Rect[12]; // set piece sources from sprite sheet
         for (int i = 0; i < 2; i++) {
             for (int j = 0; j < 6; j++) {
                 piecesSource[i * 6 + j] = new Rect(pieceImageSize * j, pieceImageSize * i,
                         (j + 1) * pieceImageSize, (i + 1) * pieceImageSize);
             }
         }
-        game = new Game(this, color);
-        LinearLayout viewGroup = (LinearLayout) getParent();
+
+        // setting sounds
+        capture = MediaPlayer.create(context, R.raw.capture);
+        slide = MediaPlayer.create(context, R.raw.slide);
+        // setting all components
+        viewGroup = (LinearLayout) getParent();
+        params = (ConstraintLayout.LayoutParams) viewGroup.getLayoutParams();
         progressBar = viewGroup.findViewById(R.id.positionBar);
         progressText = viewGroup.findViewById(R.id.positionValue);
         forwardButton = viewGroup.findViewById(R.id.forwardAnalyze);
@@ -103,20 +120,48 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         bestMove = viewGroup.findViewById(R.id.best_move);
         actualScore = viewGroup.findViewById(R.id.actual_value);
         actualMove = viewGroup.findViewById(R.id.actual_move);
+        ((MainActivity) getContext()).findViewById(R.id.main_restart).setOnClickListener(view -> init());
+        init();
+    }
+
+    /**
+     * Initialize / reset all variables
+     */
+    private void init() {
+        selectedX = null;
+        selectedY = null;
+        selection = false;
+        updateBar(0, -1);
+        analyzing = false;
+        whiteTurn = true;
+        moves = "";
+        finishedGame = null;
+        game = new Game(this, color);
+        // if black make computer response
         if (!color) {
+            whiteTurn = false;
             game.response(true);
         }
+        // reset analyze desk
+        setBias(0.5f);
+        hideAnalyze();
+        analyzeDesk.setVisibility(GONE);
         repaint();
     }
 
     @Override
     public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {
-
     }
 
     @Override
     public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
+    }
 
+    @Override
+    public void onMeasure(int widthSpec, int heightSpec) {
+        super.onMeasure(widthSpec, heightSpec);
+        int size = Math.min(getMeasuredWidth(), getMeasuredHeight());
+        setMeasuredDimension(size, size);
     }
 
     @Override
@@ -234,13 +279,6 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         }
     }
 
-    @Override
-    public void onMeasure(int widthSpec, int heightSpec) {
-        super.onMeasure(widthSpec, heightSpec);
-        int size = Math.min(getMeasuredWidth(), getMeasuredHeight());
-        setMeasuredDimension(size, size);
-    }
-
     private void drawBoard(Canvas canvas) {
         Paint p = new Paint();
 
@@ -297,18 +335,20 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (analyzing) {
+        if (analyzing || animation) {
             return false;
         }
         if (finishedGame != null) {
             showEndDialog();
             return false;
         }
-        if (animation)
-            return false;
         moves = "";
         int newX = (int) (event.getX() / getWidth() * boardSize);
         int newY = (int) (event.getY() / getHeight() * boardSize);
+        if (!color) {
+            newX = boardSize - 1 - newX;
+            newY = boardSize - 1 - newY;
+        }
         if (selection) {
             checkMove(newX, newY);
         } else {
@@ -326,22 +366,34 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
 
     private void checkMove(int newX, int newY) {
         selection = game.isMyPiece(newY, newX, whiteTurn);
+        boolean isCapture = game.capture(newY, newX); // for sound playing
         if (game.checkMoveAndMake(selectedY, selectedX, newY, newX, whiteTurn)) {
-            if (twoPlayers) {
-                whiteTurn = !whiteTurn;
-            } else {
-                game.response(!whiteTurn);
-            }
-            game.gameFinished(whiteTurn);
-
-
-            selection = false;
-            animationX = selectedX * pieceWidth;
-            animationY = selectedY * pieceHeight;
-
-            //            animation(newY, newX);
+            if (isCapture)
+                capture.start();
+            else
+                slide.start();
+            updateGame();
         }
+    }
 
+    private void updateGame() {
+        if (twoPlayers) {
+            whiteTurn = !whiteTurn;
+            new Thread(() -> {
+                int score = game.scoreMove(whiteTurn);
+                ((MainActivity) getContext()).runOnUiThread(() -> updateBar(whiteTurn ? score : -score, -1));
+            }).start();
+        } else {
+            game.response(!whiteTurn);
+            slide.start();
+        }
+        game.gameFinished(whiteTurn);
+
+        selection = false;
+//        animationX = selectedX * pieceWidth;
+//        animationY = selectedY * pieceHeight;
+
+        //            animation(newY, newX);
     }
 
     public void showDialog(String promotionMove) {
@@ -386,16 +438,13 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     public void cancelDialog(char piece) {
-        if (whiteTurn)
+        if (!whiteTurn)
             piece = Character.toLowerCase(piece);
         dialog.cancel();
         String move = promotionMove.substring(0, 2) + piece + promotionMove.charAt(3);
-        if (twoPlayers) {
-            game.makeRealMove(move, whiteTurn);
-        } else {
-            game.response(!whiteTurn);
-        }
-        game.gameFinished(whiteTurn);
+        game.makeRealMove(move, whiteTurn);
+
+        updateGame();
         repaint();
     }
 
@@ -411,34 +460,39 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
                 .start();
     }
 
+    /*
+        End dialog
+     */
+
+    /**
+     * Show end dialog if game is finished
+     */
     public void showEndDialog() {
         endDialog = new Dialog(context);
         endDialog.setContentView(R.layout.end_dialog);
         endDialog.setTitle("Game finished");
         ((TextView) endDialog.findViewById(R.id.result)).setText(finishedGame);
-        endDialog.findViewById(R.id.back).setOnClickListener(view -> {
-            ViewPager2 viewPager2 = ((MainActivity) getContext()).getViewPager2();
-            viewPager2.setCurrentItem(viewPager2.getCurrentItem() - 1);
+        endDialog.findViewById(R.id.back).setOnClickListener(view -> { // go to menu
+            goBack();
             endDialog.dismiss();
         });
-        endDialog.findViewById(R.id.analyzeButton).setOnClickListener(view -> {
-            analyze();
-        });
+        endDialog.findViewById(R.id.analyzeButton).setOnClickListener(view -> analyze());
         endDialog.findViewById(R.id.replay).setOnClickListener(view -> {
-            game = new Game(this, color);
-            selectedX = null;
-            selectedY = null;
-            selection = false;
-            updateBar(0, -1);
-            analyzing = false;
-            whiteTurn = true;
-            finishedGame = null;
-            repaint();
+            init();
             endDialog.dismiss();
         });
-
+        // fullscreen dialog
         setParams(endDialog);
     }
+
+    private void goBack() {
+        ViewPager2 viewPager2 = ((MainActivity) getContext()).getViewPager2();
+        viewPager2.setCurrentItem(viewPager2.getCurrentItem() - 1);
+    }
+
+    /*
+        Analyzing
+     */
 
     private void analyze() {
         endDialog.setCancelable(false);
@@ -447,10 +501,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         analyzeDesk.setVisibility(VISIBLE);
         endDialog.getWindow().setAttributes(lp);
         analyzing = true;
-        LinearLayout viewGroup = (LinearLayout) getParent();
-        ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) viewGroup.getLayoutParams();
-        params.verticalBias = 0.0f;
-        viewGroup.setLayoutParams(params);
+        setBias(0.0f);
 
         new Thread(() -> {
             Analyze analyze;
@@ -472,10 +523,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
                 int currentMove = analyze.moveBack();
                 if (currentMove == -2) {
                     repaint();
-                    bestScore.setVisibility(INVISIBLE);
-                    bestMove.setVisibility(INVISIBLE);
-                    actualScore.setVisibility(INVISIBLE);
-                    actualMove.setVisibility(INVISIBLE);
+                    hideAnalyze();
                     updateBar(0, -1);
                 } else if (currentMove > -1) {
                     updateAnalyze(analyze, currentMove);
@@ -489,24 +537,38 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         repaint();
         bestMove.setText(analyze.bestMoves[currentMove]);
         int score = analyze.bestScores[currentMove];
-        bestScore.setText("" + score);
         if (score >= 0) {
+            bestScore.setText("+" + score);
             bestScore.setTextColor(Color.BLACK);
             bestScore.setBackgroundColor(Color.WHITE);
         } else {
+            bestScore.setText("" + score);
             bestScore.setTextColor(Color.WHITE);
             bestScore.setBackgroundColor(Color.BLACK);
         }
         actualMove.setText(analyze.getMove(currentMove * 5));
         score = analyze.moveScores[currentMove];
         updateBar(score, -1);
-        actualScore.setText("" + score);
         if (score >= 0) {
+            actualScore.setText("+" + score);
             actualScore.setTextColor(Color.BLACK);
             actualScore.setBackgroundColor(Color.WHITE);
         } else {
+            actualScore.setText("" + score);
             actualScore.setTextColor(Color.WHITE);
             actualScore.setBackgroundColor(Color.BLACK);
         }
+    }
+
+    private void hideAnalyze() {
+        bestScore.setVisibility(INVISIBLE);
+        bestMove.setVisibility(INVISIBLE);
+        actualScore.setVisibility(INVISIBLE);
+        actualMove.setVisibility(INVISIBLE);
+    }
+
+    private void setBias(float bias) {
+        params.verticalBias = bias;
+        viewGroup.setLayoutParams(params);
     }
 }

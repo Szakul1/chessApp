@@ -1,7 +1,6 @@
 package com.example.chessapp;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
 import android.app.Dialog;
@@ -12,8 +11,6 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import com.example.chessapp.game.logic.Game;
-import com.example.chessapp.gui.PromotionChoice;
 import com.example.chessapp.gui.ScreenSlidePagerAdapter;
 
 import java.util.Objects;
@@ -98,4 +95,9 @@ public class MainActivity extends AppCompatActivity {
             textView.setVisibility(View.VISIBLE);
         }
     }
+
+    public void goBack(View view) {
+        viewPager2.setCurrentItem(viewPager2.getCurrentItem() - 1);
+    }
+
 }

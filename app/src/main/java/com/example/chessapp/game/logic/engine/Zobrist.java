@@ -6,6 +6,8 @@ import static com.example.chessapp.game.logic.Game.isDoublePush;
 import static com.example.chessapp.game.logic.Game.updateCastling;
 import static com.example.chessapp.game.logic.Move.*;
 
+import android.util.Log;
+
 import com.example.chessapp.game.logic.Move;
 
 import java.security.SecureRandom;

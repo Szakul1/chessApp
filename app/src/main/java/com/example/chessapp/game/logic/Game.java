@@ -5,7 +5,7 @@ import android.widget.ProgressBar;
 
 import static com.example.chessapp.game.logic.BitBoards.*;
 
-import com.example.chessapp.game.Board;
+import com.example.chessapp.game.frontend.Board;
 import com.example.chessapp.game.logic.engine.Analyze;
 import com.example.chessapp.game.logic.engine.Engine;
 import com.example.chessapp.game.logic.engine.Zobrist;
@@ -152,7 +152,7 @@ public class Game {
                 move = "" + col + newCol + (white ? 'Q' : 'q') + 'P';
                 if (movesContains(move, possibleMoves)) {
                     board.showDialog(move);
-                    return true;
+                    return false;
                 }
             } else if (col != newCol && chessBoard[newRow][newCol] == ' ') {
                 move = "" + col + newCol + (white ? 'W' : 'B') + 'E';
@@ -188,7 +188,7 @@ public class Game {
     public void response(boolean white) {
         board.repaint();
 
-        int score = engine.findBestMove(boards, castleFlags, white);
+        int score = engine.findBestMove(boards, castleFlags, white, hashKey);
         score = white ? score : -score;
         String move = engine.bestMove;
 
@@ -284,13 +284,17 @@ public class Game {
         return list.toString();
     }
 
+    public int scoreMove(boolean white) {
+        return engine.scoreMove(boards, castleFlags, white, hashKey);
+    }
+
     /*
         Updating board
      */
 
     public char updateBoard(String m) {
         Move move = Move.parseMove(m);
-        char piece = chessBoard[move.startRow][move.startCol];
+        char piece = chessBoard[move.targetRow][move.targetCol];
         if (move.promotion) {
             chessBoard[move.targetRow][move.targetCol] = move.promotionPiece;
         } else {
@@ -312,7 +316,7 @@ public class Game {
             boolean white = Character.isUpperCase(m.charAt(2));
             chessBoard[move.startRow][move.startCol] = white ? 'P' : 'p';
         } else {
-            chessBoard[move.startRow][move.startCol] = chessBoard[move.startRow][move.startCol];
+            chessBoard[move.startRow][move.startCol] = chessBoard[move.targetRow][move.targetCol];
         }
         chessBoard[move.targetRow][move.targetCol] = piece;
         if (move.castle) {
@@ -331,7 +335,7 @@ public class Game {
     public Analyze startAnalyze(boolean white, ProgressBar bar) {
         arrayToBitboards();
         Analyze analyze = new Analyze(this, engine);
-        analyze.analyzeGame(moveHistory, boards, castleFlags, white, bar);
+        analyze.analyzeGame(moveHistory, boards, castleFlags, white, bar, zobrist);
         resetBoard();
         return analyze;
     }
@@ -377,6 +381,10 @@ public class Game {
         return (getMyPieces(white, boards) & (1L << position)) != 0;
     }
 
+    public boolean capture(int row, int col) {
+        return chessBoard[row][col] != ' ';
+    }
+
     public void gameFinished(boolean white) {
         String moves = possibleMoves(white);
         finishGame(moves.length(), white);
@@ -414,6 +422,8 @@ public class Game {
 
     public static boolean[] updateCastling(String move, long[] pieces, boolean[] castleFlags) {
         boolean[] flags = Arrays.copyOf(castleFlags, castleFlags.length);
+        if (move.charAt(3) == 'C')
+                move = getCastleMove(move);
         if (Character.isDigit(move.charAt(3))) {// 'regular' move
             int start = getValFromString(move, 0) * 8 + getValFromString(move, 1);
             if (((1L << start) & pieces[WK]) != 0) {
