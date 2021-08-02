@@ -1,10 +1,13 @@
-package com.example.chessapp.game.logic;
+package com.example.chessapp.game.logic.engine;
 
 import static com.example.chessapp.game.logic.BitBoards.*;
 
+import com.example.chessapp.game.logic.Game;
+import com.example.chessapp.game.logic.Move;
+
 public class Rating {
 
-    public int scoreMove(String move, long[] boards, boolean white) {
+    public int scoreMove(String move, long[] boards, boolean white, int ply) {
         long opponentPieces = Game.getMyPieces(!white, boards);
         if (move.charAt(3) == 'E')
             return mvv_lva[WP][BP];
@@ -20,8 +23,17 @@ public class Rating {
                     targetPiece = i;
                 }
             }
-            return mvv_lva[startPieces][targetPiece];
+            return mvv_lva[startPieces][targetPiece] + 10000;
         }
+//        else {
+//            if (killerMoves[0][ply] == move) {
+//                return 9000;
+//            } else if (killerMoves[1][ply] == move) {
+//                return 8000;
+//            } else {
+//                return historyMoves[]
+//            }
+//        }
         // TODO quiet move
 
         return 0;
@@ -63,16 +75,16 @@ public class Rating {
         return (7 - position / 8) * 8 + position % 8;
     }
 
-    public boolean captureMove(String move, long opponentPieces) {
-        // TODO castle
-        if (move.charAt(3) != 'E') {
-            if (!Character.isDigit(move.charAt(3)))
-                return false;
-            int position = Game.getValFromString(move, 2) * 8 + Game.getValFromString(move, 3);
-            // not capture
-            return ((1L << position) & opponentPieces) != 0;
+    public boolean captureMove(String m, long opponentPieces) {
+        Move move = Move.parseMove(m);
+        if (move.castle)
+            return false;
+        if (move.enPassant) {
+            return true;
         }
-        return true;
+        int position = move.targetRow * 8 + move.targetCol;
+        // not capture
+        return ((1L << position) & opponentPieces) != 0;
     }
 
     /*
@@ -86,6 +98,7 @@ public class Rating {
             King   100    200    300    400    500    600
     */
 
+    // [attacker][victim]
     private final int[][] mvv_lva = {
             {105, 205, 305, 405, 505, 605, 105, 205, 305, 405, 505, 605},
             {104, 204, 304, 404, 504, 604, 104, 204, 304, 404, 504, 604},
@@ -100,6 +113,9 @@ public class Rating {
             {101, 201, 301, 401, 501, 601, 101, 201, 301, 401, 501, 601},
             {100, 200, 300, 400, 500, 600, 100, 200, 300, 400, 500, 600}
     };
+
+    String[][] killerMoves = new String[2][64];
+    String[][] historyMoves = new String[12][64];
 
     // pawn positional score
     private final int pawn_score[] =

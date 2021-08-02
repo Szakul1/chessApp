@@ -1,8 +1,9 @@
-package com.example.chessapp.game.logic;
+package com.example.chessapp.game.logic.engine;
 
 import android.util.Log;
 import android.widget.ProgressBar;
-import android.widget.TextView;
+
+import com.example.chessapp.game.logic.Game;
 
 import java.util.Arrays;
 
@@ -35,7 +36,7 @@ public class Analyze {
             bestScores[i / 5] = score;
             String move = moves.substring(i, i + 4);
             boards = game.makeMove(move, boards);
-            game.updateCastling(move, boards, castleFlags);
+            castleFlags = game.updateCastling(move, boards, castleFlags);
             white = !white;
             score = engine.scoreMove(boards, castleFlags, white);
             score = white ? score : -score;

@@ -5,11 +5,11 @@ import android.widget.ProgressBar;
 
 import static com.example.chessapp.game.logic.BitBoards.*;
 
-import androidx.appcompat.widget.WithHint;
-
 import com.example.chessapp.game.Board;
+import com.example.chessapp.game.logic.engine.Analyze;
+import com.example.chessapp.game.logic.engine.Engine;
+import com.example.chessapp.game.logic.engine.Zobrist;
 
-import java.lang.reflect.Method;
 import java.util.Arrays;
 
 public class Game {
@@ -64,6 +64,11 @@ public class Game {
                     0x804020100000000L, 0x402010000000000L, 0x201000000000000L, 0x100000000000000L};
 
     public String moveHistory = "";
+    public long hashKey;
+
+    /*
+        Initializing board
+     */
 
     private void arrayToBitboards() {
         boards = new long[]{0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,};
@@ -71,46 +76,43 @@ public class Game {
         resetBoard();
         long binary = 1L;
         for (int i = 0; i < 64; i++) {
-            switch (chessBoard[i / 8][i % 8]) {
-                case 'P':
-                    boards[WP] += binary;
-                    break;
-                case 'N':
-                    boards[WN] += binary;
-                    break;
-                case 'B':
-                    boards[WB] += binary;
-                    break;
-                case 'R':
-                    boards[WR] += binary;
-                    break;
-                case 'Q':
-                    boards[WQ] += binary;
-                    break;
-                case 'K':
-                    boards[WK] += binary;
-                    break;
-                case 'p':
-                    boards[BP] += binary;
-                    break;
-                case 'n':
-                    boards[BN] += binary;
-                    break;
-                case 'b':
-                    boards[BB] += binary;
-                    break;
-                case 'r':
-                    boards[BR] += binary;
-                    break;
-                case 'q':
-                    boards[BQ] += binary;
-                    break;
-                case 'k':
-                    boards[BK] += binary;
-                    break;
+            int board = getBoardFromChar(chessBoard[i / 8][i % 8]);
+            if (board != -1) {
+                boards[board] += binary;
             }
             binary = binary << 1;
         }
+    }
+
+    public static int getBoardFromChar(char piece) {
+        switch (piece) {
+            case 'P':
+                return WP;
+            case 'N':
+                return WN;
+            case 'B':
+                return WB;
+            case 'R':
+                return WR;
+            case 'Q':
+                return WQ;
+            case 'K':
+                return WK;
+            case 'p':
+                return BP;
+            case 'n':
+                return BN;
+            case 'b':
+                return BB;
+            case 'r':
+                return BR;
+            case 'q':
+                return BQ;
+            case 'k':
+                return BK;
+        }
+        // empty
+        return -1;
     }
 
     private void resetBoard() {
@@ -119,98 +121,87 @@ public class Game {
             chessBoard[i] = Arrays.copyOf(startingBoard[i], startingBoard.length);
     }
 
-    public Game(Board board) {
+    public Game(Board board, boolean white) {
         this.board = board;
         arrayToBitboards();
-        engine = new Engine(this);
         zobrist = new Zobrist();
+        hashKey = zobrist.generateHashKey(boards, castleFlags, white);
+        engine = new Engine(this, zobrist);
     }
 
-    public String possibleMoves(boolean white) {
-        return white ? possibleMovesW(boards, castleFlags[CWK], castleFlags[CWQ]) :
-                possibleMovesB(boards, castleFlags[CBK], castleFlags[CBQ]);
-    }
-
-    public String possibleMoves(boolean white, long[] boards, boolean[] castleFlags) {
-        return white ? possibleMovesW(boards, castleFlags[CWK], castleFlags[CWQ]) :
-                possibleMovesB(boards, castleFlags[CBK], castleFlags[CBQ]);
-    }
+    /*
+        Making moves
+     */
 
     public void makeRealMove(String move, boolean white) {
         //debugging
-        Log.d("test", zobrist.generateHashKey(boards, castleFlags, white) + "");
-        updateCastling(move, boards, castleFlags);
+//        long hashKey = zobrist.generateHashKey(boards, castleFlags, white);
+        hashKey = zobrist.hashPiece(hashKey, move, boards, castleFlags, white);
+//        Log.d("test", "is: " + hashKey);
+        castleFlags = updateCastling(move, boards, castleFlags);
         boards = makeMove(move, boards);
-        Log.d("test", zobrist.generateHashKey(boards, castleFlags, white) + "");
+//        Log.d("test", "should: " + zobrist.generateHashKey(boards, castleFlags, !white));
         moveHistory += move + updateBoard(move);
     }
 
-    public char updateBoard(String move) {
-        char piece = ' ';
-        int row = getValFromString(move, 0), col = getValFromString(move, 1);
-        if (Character.isDigit(move.charAt(3))) {// 'regular' move
-            if ("0402".equals(move) || "7472".equals(move)) {
-                chessBoard[getValFromString(move, 0)][3] = chessBoard[getValFromString(move, 0)][0];
-                chessBoard[getValFromString(move, 0)][0] = ' ';
-            } else if ("0406".equals(move) || "7476".equals(move)) {
-                chessBoard[getValFromString(move, 0)][5] = chessBoard[getValFromString(move, 0)][7];
-                chessBoard[getValFromString(move, 0)][7] = ' ';
-            }
-            int rowNew = getValFromString(move, 2), colNew = getValFromString(move, 3);
-            piece = chessBoard[rowNew][colNew];
-            chessBoard[rowNew][colNew] = chessBoard[row][col];
-            chessBoard[row][col] = ' ';
-        } else {
-            boolean white = Character.isUpperCase(move.charAt(2));
-            if (move.charAt(3) == 'P') {
-                piece = chessBoard[white ? 0 : 7][col];
-                chessBoard[white ? 0 : 7][col] = move.charAt(2);
-                chessBoard[white ? 1 : 6][row] = ' ';
+    public boolean checkMoveAndMake(int row, int col, int newRow, int newCol, boolean white) {
+        String possibleMoves = possibleMoves(white);
+        String move = "";
+        if (Character.toLowerCase(chessBoard[row][col]) == 'p') {
+            if (white ? newRow == 0 : newRow == 7) { // promotion
+                move = "" + col + newCol + (white ? 'Q' : 'q') + 'P';
+                if (movesContains(move, possibleMoves)) {
+                    board.showDialog(move);
+                    return true;
+                }
+            } else if (col != newCol && chessBoard[newRow][newCol] == ' ') {
+                move = "" + col + newCol + (white ? 'W' : 'B') + 'E';
             } else {
-                piece = chessBoard[white ? 3 : 4][col];
-                chessBoard[white ? 2 : 5][col] = chessBoard[white ? 3 : 4][row];
-                chessBoard[white ? 3 : 4][row] = ' ';
-                chessBoard[white ? 3 : 4][col] = ' ';
+                move = "" + row + col + newRow + newCol;
+            }
+        } else {
+            move = "" + row + col + newRow + newCol;
+            if (Character.toLowerCase(chessBoard[row][col]) == 'k') {
+                switch (move) {
+                    case "0402":
+                        move = "CBQC";
+                        break;
+                    case "0406":
+                        move = "CBKC";
+                        break;
+                    case "7472":
+                        move = "CWQC";
+                        break;
+                    case "7476":
+                        move = "CWKC";
+                        break;
+                }
             }
         }
-        return piece;
-    }
-
-    public void undoMove(String move, char piece) {
-        int row = getValFromString(move, 0), col = getValFromString(move, 1);
-        if (Character.isDigit(move.charAt(3))) {// 'regular' move
-            if ("0402".equals(move) || "7472".equals(move)) { // rook move
-                chessBoard[getValFromString(move, 0)][0] = chessBoard[getValFromString(move, 0)][3];
-                chessBoard[getValFromString(move, 0)][3] = ' ';
-            } else if ("0406".equals(move) || "7476".equals(move)) {
-                chessBoard[getValFromString(move, 0)][7] = chessBoard[getValFromString(move, 0)][5];
-                chessBoard[getValFromString(move, 0)][5] = ' ';
-            }
-            int rowNew = getValFromString(move, 2), colNew = getValFromString(move, 3);
-            chessBoard[row][col] = chessBoard[rowNew][colNew];
-            chessBoard[rowNew][colNew] = piece;
-        } else {
-            boolean white = Character.isUpperCase(move.charAt(2));
-            if (move.charAt(3) == 'P') {
-                chessBoard[white ? 1 : 6][row] = chessBoard[white ? 0 : 7][col];
-                chessBoard[white ? 0 : 7][col] = piece;
-            } else {
-                chessBoard[white ? 3 : 4][row] = chessBoard[white ? 2 : 5][col];
-                chessBoard[white ? 3 : 4][col] = piece;
-                chessBoard[white ? 2 : 5][col] = ' ';
-            }
+        if (movesContains(move, possibleMoves)) {
+            makeRealMove(move, white);
+            return true;
         }
+        return false;
     }
 
-    public Analyze startAnalyze(boolean white, ProgressBar bar) {
-        arrayToBitboards();
-        Analyze analyze = new Analyze(this, engine);
-        analyze.analyzeGame(moveHistory, boards, castleFlags, white, bar);
-        resetBoard();
-        return analyze;
+    public void response(boolean white) {
+        board.repaint();
+
+        int score = engine.findBestMove(boards, castleFlags, white);
+        score = white ? score : -score;
+        String move = engine.bestMove;
+
+        if (!move.isEmpty()) {
+            makeRealMove(move, white);
+        }
+        finishGame(move.length(), white);
+        board.updateBar(score, engine.mate);
     }
 
     public long[] makeMove(String move, long[] pieces) {
+        if (move.charAt(3) == 'C')
+            move = getCastleMove(move);
         long tempWR = makeMoveForBoard(pieces[WR], move, 'R');
         long tempBR = makeMoveForBoard(pieces[BR], move, 'r');
         return new long[]{
@@ -230,63 +221,35 @@ public class Game {
         };
     }
 
-    public boolean kingSafe(boolean white, long[] pieces) {
-        return white ? (pieces[WK] & unsafeForWhite(pieces)) == 0 :
-                (pieces[BK] & unsafeForBlack(pieces)) == 0;
+    /*
+        Getting moves
+     */
+
+    public String possibleMoves(boolean white) {
+        return possibleMoves(white, boards, castleFlags);
     }
 
-    public boolean kingSafe(boolean white) {
-        return kingSafe(white, boards);
-    }
-
-    public boolean isMyPiece(int row, int col, boolean white) {
-        int position = row * 8 + col;
-        return (getMyPieces(white, boards) & (1L << position)) != 0;
-    }
-
-    public void response(boolean white) {
-        board.repaint();
-
-        int score = engine.findBestMove(boards, castleFlags, white);
-        score = white ? score : -score;
-        String move = engine.bestMove;
-
-        if (!move.isEmpty()) {
-            makeRealMove(move, white);
-        }
-        finishGame(move.length(), white);
-        board.updateBar(score, engine.mate);
-    }
-
-    public boolean checkMoveAndMake(int row, int col, int newRow, int newCol, boolean white) {
-        String possibleMoves = possibleMoves(white);
-        String move = "";
-        if (Character.toLowerCase(chessBoard[row][col]) == 'p') {
-            if (white ? newRow == 0 : newRow == 7) { // promotion
-                move = "" + col + newCol + (white ? 'Q' : 'q') + 'P';
-                if (movesContains(move, possibleMoves)) {
-                    long[] temp = makeMove(move, boards);
-                    if (kingSafe(white, temp)) {
-                        board.showDialog(move);
-                        return true;
-                    }
-                }
-            } else if (col != newCol && chessBoard[newRow][newCol] == ' ') {
-                move = "" + col + newCol + (white ? 'W' : 'B') + 'E';
-            } else {
-                move = "" + row + col + newRow + newCol;
+    public String possibleMoves(boolean white, long[] boards, boolean[] castleFlags) {
+        String moves = white ? possibleMovesW(boards, castleFlags[CWK], castleFlags[CWQ]) :
+                possibleMovesB(boards, castleFlags[CBK], castleFlags[CBQ]);
+        StringBuilder possible = new StringBuilder();
+        for (int i = 0; i < moves.length(); i += 4) {
+            String move = moves.substring(i, i + 4);
+            long[] nextBoards = makeMove(move, boards);
+            long unsafe = white ? unsafeForWhite(nextBoards) : unsafeForBlack(nextBoards);
+            // checking castle square safe
+            if (move.equals("CWQC") && (unsafe & (1L << 59)) != 0 ||
+                    move.equals("CWKC") && (unsafe & (1L << 61)) != 0 ||
+                    move.equals("CBQC") && (unsafe & (1L << 3)) != 0 ||
+                    move.equals("CBKC") && (unsafe & (1L << 5)) != 0) {
+                continue;
             }
-        } else {
-            move = "" + row + col + newRow + newCol;
-        }
-        if (movesContains(move, possibleMoves)) {
-            long[] temp = makeMove(move, boards);
-            if (kingSafe(white, temp)) {
-                makeRealMove(move, white);
-                return true;
+            if ((unsafe & (white ? nextBoards[WK] : nextBoards[BK])) != 0) {
+                continue;
             }
+            possible.append(move);
         }
-        return false;
+        return possible.toString();
     }
 
     public String getMovesForPiece(int row, int col, boolean white) {
@@ -294,6 +257,9 @@ public class Game {
         StringBuilder list = new StringBuilder();
         for (int i = 0; i < moves.length(); i += 4) {
             String move = moves.substring(i, i + 4);
+            if (move.charAt(3) == 'C') {
+                move = getCastleMove(move);
+            }
             int moveRow, moveCol, newRow, newCol;
             if (Character.isDigit(move.charAt(3))) {// 'regular' move
                 moveRow = getValFromString(move, 0);
@@ -312,26 +278,108 @@ public class Game {
                 }
             }
             if (moveRow == row && moveCol == col) {
-                long[] pieces = makeMove(move, boards);
-                if (kingSafe(white, pieces)) {
-                    list.append(newRow).append(newCol);
-                }
+                list.append(newRow).append(newCol);
             }
         }
         return list.toString();
     }
 
+    /*
+        Updating board
+     */
+
+    public char updateBoard(String m) {
+        Move move = Move.parseMove(m);
+        char piece = chessBoard[move.startRow][move.startCol];
+        if (move.promotion) {
+            chessBoard[move.targetRow][move.targetCol] = move.promotionPiece;
+        } else {
+            chessBoard[move.targetRow][move.targetCol] = chessBoard[move.startRow][move.startCol];
+        }
+        chessBoard[move.startRow][move.startCol] = ' ';
+        if (move.castle) {
+            chessBoard[move.startRow][move.rookTargetCol] = chessBoard[move.startRow][move.rookStartCol];
+            chessBoard[move.startRow][move.rookStartCol] = ' ';
+        } else if (move.enPassant) {
+            chessBoard[move.startRow][move.targetCol] = ' ';
+        }
+        return piece;
+    }
+
+    public void undoMove(String m, char piece) {
+        Move move = Move.parseMove(m);
+        if (move.promotion) {
+            boolean white = Character.isUpperCase(m.charAt(2));
+            chessBoard[move.startRow][move.startCol] = white ? 'P' : 'p';
+        } else {
+            chessBoard[move.startRow][move.startCol] = chessBoard[move.startRow][move.startCol];
+        }
+        chessBoard[move.targetRow][move.targetCol] = piece;
+        if (move.castle) {
+            chessBoard[move.startRow][move.rookStartCol] = chessBoard[move.startRow][move.rookTargetCol];
+            chessBoard[move.startRow][move.rookTargetCol] = ' ';
+        } else if (move.enPassant) {
+            boolean white = m.charAt(2) == 'W';
+            chessBoard[move.startRow][move.targetCol] = white ? 'p' : 'P';
+        }
+    }
+
+    /*
+        Analyze
+     */
+
+    public Analyze startAnalyze(boolean white, ProgressBar bar) {
+        arrayToBitboards();
+        Analyze analyze = new Analyze(this, engine);
+        analyze.analyzeGame(moveHistory, boards, castleFlags, white, bar);
+        resetBoard();
+        return analyze;
+    }
+
+    /*
+        Other functions
+     */
+
+    public static String getCastleMove(String move) {
+        switch (move) {
+            case "0402":
+                return "CBQC";
+            case "0406":
+                return "CBKC";
+            case "7472":
+                return "CWQC";
+            case "7476":
+                return "CWKC";
+
+            case "CBQC":
+                return "0402";
+            case "CBKC":
+                return "0406";
+            case "CWQC":
+                return "7472";
+            case "CWKC":
+                return "7476";
+        }
+        return move;
+    }
+
+    public boolean kingSafe(boolean white, long[] pieces) {
+        return white ? (pieces[WK] & unsafeForWhite(pieces)) == 0 :
+                (pieces[BK] & unsafeForBlack(pieces)) == 0;
+    }
+
+    public boolean kingSafe(boolean white) {
+        return kingSafe(white, boards);
+    }
+
+    public boolean isMyPiece(int row, int col, boolean white) {
+        int position = row * 8 + col;
+        return (getMyPieces(white, boards) & (1L << position)) != 0;
+    }
+
     public void gameFinished(boolean white) {
         String moves = possibleMoves(white);
-        int moveCounter = 0;
-        for (int i = 0; i < moves.length(); i += 4) {
-            String move = moves.substring(i, i + 4);
-            long[] pieces = makeMove(move, boards);
-            if (kingSafe(white, pieces)) {
-                moveCounter++;
-            }
-        }
-        finishGame(moveCounter, white);
+        finishGame(moves.length(), white);
     }
 
     private void finishGame(int moveCounter, boolean white) {
@@ -364,7 +412,8 @@ public class Game {
         return false;
     }
 
-    public void updateCastling(String move, long[] pieces, boolean[] flags) {
+    public static boolean[] updateCastling(String move, long[] pieces, boolean[] castleFlags) {
+        boolean[] flags = Arrays.copyOf(castleFlags, castleFlags.length);
         if (Character.isDigit(move.charAt(3))) {// 'regular' move
             int start = getValFromString(move, 0) * 8 + getValFromString(move, 1);
             if (((1L << start) & pieces[WK]) != 0) {
@@ -383,6 +432,7 @@ public class Game {
                 flags[CBQ] = false;
             }
         }
+        return flags;
     }
 
     long straightMoves(int position) {
@@ -462,27 +512,27 @@ public class Game {
 
     public long makeMoveCastle(long rookBoard, long kingBoard, String move, char type) {
         int start = (getValFromString(move, 0) * 8) + (getValFromString(move, 1));
-        //'regular' move
+        move = getCastleMove(move);
         if ((((kingBoard >> start) & 1) == 1) &&
-                (("0402".equals(move)) || ("0406".equals(move)) || ("7472".equals(move)) || ("7476".equals(move)))) {
+                (("CBQC".equals(move)) || ("CBKC".equals(move)) || ("CWKC".equals(move)) || ("CWQC".equals(move)))) {
             if (type == 'R') {
                 switch (move) {
-                    case "7472":
+                    case "CWQC":
                         rookBoard &= ~(1L << CASTLE_ROOKS[1]);
                         rookBoard |= (1L << (CASTLE_ROOKS[1] + 3));
                         break;
-                    case "7476":
+                    case "CWKC":
                         rookBoard &= ~(1L << CASTLE_ROOKS[0]);
                         rookBoard |= (1L << (CASTLE_ROOKS[0] - 2));
                         break;
                 }
             } else {
                 switch (move) {
-                    case "0402":
+                    case "CBQC":
                         rookBoard &= ~(1L << CASTLE_ROOKS[3]);
                         rookBoard |= (1L << (CASTLE_ROOKS[3] + 3));
                         break;
-                    case "0406":
+                    case "CBKC":
                         rookBoard &= ~(1L << CASTLE_ROOKS[2]);
                         rookBoard |= (1L << (CASTLE_ROOKS[2] - 2));
                         break;
@@ -493,13 +543,22 @@ public class Game {
     }
 
     public long makeMoveEP(long board, String move) {
+        if (isDoublePush(move, board)) {
+            int row = (getValFromString(move, 0));
+            int col = (getValFromString(move, 1));
+            return (row == 1 ? rowMasks8[3] : rowMasks8[4]) & columnMasks8[col];
+        } else
+            return 0;
+    }
+
+    public static boolean isDoublePush(String move, long board) {
         if (Character.isDigit(move.charAt(3))) {
             int start = (getValFromString(move, 0) * 8) + (getValFromString(move, 1));
             if ((Math.abs(move.charAt(0) - move.charAt(2)) == 2) && (((board >> start) & 1) == 1)) {// pawn double push
-                return columnMasks8[getValFromString(move, 1)];
+                return true;
             }
         }
-        return 0;
+        return false;
     }
 
     public String possibleMovesW(long[] pieces, boolean CWK, boolean CWQ) {
@@ -641,15 +700,15 @@ public class Game {
     }
 
     private String possibleB(long BBoard) {
-        return getMoves(BBoard, this::diagonalMoves);
+        return getSlidingMoves(BBoard, this::diagonalMoves);
     }
 
     public String possibleR(long RBoard) {
-        return getMoves(RBoard, this::straightMoves);
+        return getSlidingMoves(RBoard, this::straightMoves);
     }
 
     public String possibleQ(long QBoard) {
-        return getMoves(QBoard, this::getQueenMoves);
+        return getSlidingMoves(QBoard, this::getQueenMoves);
     }
 
     private long getQueenMoves(int position) {
@@ -658,7 +717,6 @@ public class Game {
 
     private interface GetMoves {
         long getMoves(int location);
-
     }
 
     public String possibleK(long ABoard) {
@@ -686,7 +744,7 @@ public class Game {
         return list.toString();
     }
 
-    private String getMoves(long board, GetMoves getMoves) {
+    private String getSlidingMoves(long board, GetMoves getMoves) {
         StringBuilder list = new StringBuilder();
         long piece = board & -board;
         while (piece != 0) {
@@ -721,10 +779,10 @@ public class Game {
         StringBuilder list = new StringBuilder();
         // must empty places
         if (castleWK && (occupied & ((1L << 61) | (1L << 62))) == 0) {
-            list.append("7476");
+            list.append("CWKC");
         }
         if (castleWQ && (occupied & ((1L << 57) | (1L << 58) | (1L << 59))) == 0) {
-            list.append("7472");
+            list.append("CWQC");
         }
         return list.toString();
     }
@@ -733,10 +791,10 @@ public class Game {
         StringBuilder list = new StringBuilder();
         // must empty places
         if (castleBK && (occupied & ((1L << 5) | (1L << 6))) == 0) {
-            list.append("0406");
+            list.append("CBKC");
         }
         if (castleBQ && (occupied & ((1L << 1) | (1L << 2) | (1L << 3))) == 0) {
-            list.append("0402");
+            list.append("CBQC");
         }
         return list.toString();
     }

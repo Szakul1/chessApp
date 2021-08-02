@@ -15,13 +15,10 @@ import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -30,14 +27,13 @@ import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.chessapp.MainActivity;
 import com.example.chessapp.R;
-import com.example.chessapp.game.logic.Analyze;
+import com.example.chessapp.game.logic.engine.Analyze;
 import com.example.chessapp.game.logic.Game;
 import com.example.chessapp.gui.PromotionChoice;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Handler;
 
 @SuppressLint("ViewConstructor")
 public class Board extends SurfaceView implements SurfaceHolder.Callback {
@@ -96,7 +92,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
                         (j + 1) * pieceImageSize, (i + 1) * pieceImageSize);
             }
         }
-        game = new Game(this);
+        game = new Game(this, color);
         LinearLayout viewGroup = (LinearLayout) getParent();
         progressBar = viewGroup.findViewById(R.id.positionBar);
         progressText = viewGroup.findViewById(R.id.positionValue);
@@ -429,7 +425,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             analyze();
         });
         endDialog.findViewById(R.id.replay).setOnClickListener(view -> {
-            game = new Game(this);
+            game = new Game(this, color);
             selectedX = null;
             selectedY = null;
             selection = false;

@@ -1,80 +1,111 @@
-package com.example.chessapp.game.logic;
+package com.example.chessapp.game.logic.engine;
 
-import android.service.controls.Control;
 import android.util.Log;
 
-import com.example.chessapp.R;
+import com.example.chessapp.game.logic.Game;
 
-import java.util.Arrays;
-import java.util.zip.DeflaterOutputStream;
+import java.util.HashMap;
 
 import static com.example.chessapp.game.logic.BitBoards.*;
 
 public class Engine {
     private final Game game;
-    public int globalDepth = 4;
+    private final Zobrist zobrist;
+    public static int globalDepth = 6;
     private final static int mateScore = 49000;
     private final static int infinity = 50000;
     private final Rating rating;
     public String bestMove;
     public int mate = -1;
 
-    public Engine(Game game) {
+    public HashMap<Long, TranspositionTable> table = new HashMap();
+
+    public Engine(Game game, Zobrist zobrist) {
         this.game = game;
+        this.zobrist = zobrist;
         rating = new Rating();
     }
 
     public int scoreMove(long[] boards, boolean[] castleFlags, boolean white) {
-        return alphaBeta(-infinity, infinity, globalDepth - 1, boards, castleFlags, white);
+        return alphaBeta(-infinity, infinity, globalDepth - 1, boards, castleFlags, white, 0); //TODO hashKey
     }
 
     public int findBestMove(long[] boards, boolean[] castleFlags, boolean white) {
         bestMove = "";
         mate = -1;
         nodes = 0;
-        int score = alphaBeta(-infinity, infinity, globalDepth, boards, castleFlags, white);
-        Log.d("test", "nodes: " + nodes);
+        test = 0;
+        depth0 = 0;
+        int score=0;
+        for (int i = 1; i <= globalDepth; i++) {
+            nodes = 0;
+            score = alphaBeta(-infinity, infinity, i, boards, castleFlags, white, game.hashKey);
+            Log.d("test", "nodes: " + nodes);
+        }
         if (Math.abs(score) >= mateScore - globalDepth) {
             mate = (mateScore - Math.abs(score)) / 2;
         }
+
+        Log.d("test", "size: " + table.size());
+//        Log.d("test", "depth0: " + depth0);
+//        Log.d("test", "test: " + test);
         return score;
     }
 
     int nodes = 0;
+    int depth0 = 0;
+    int test = 0;
 
-    private int alphaBeta(int alpha, int beta, int depth, long[] boards, boolean[] castleFlags, boolean white) {
+    private int alphaBeta(int alpha, int beta, int depth, long[] boards, boolean[] castleFlags, boolean white, long hashKey) {
+        int hashFlag = hash_alpha;
+        int score;
+        if (table.containsKey(hashKey)) {
+            Integer val = table.get(hashKey).readEntry(alpha, beta, depth);
+            if (val != null) {
+                return val;
+            } else {
+                test++;
+            }
+        }
+
         nodes++;
         if (depth == 0) {
+            depth0++;
             costam = 0;
-            int score = quiescence(alpha, beta, boards, castleFlags, white);
+            score = quiescence(alpha, beta, boards, castleFlags, white);
 //            Log.d("test", costam+"");
             nodes += costam;
             return score;
         }
 
+        int ply = globalDepth - depth;
         String moves = game.possibleMoves(white, boards, castleFlags);
-        moves = sortMoves(moves, boards, white);
+        moves = sortMoves(moves, boards, white, ply);
         int legalMoves = 0;
-        int score;
         String bestMove = "";
         int oldAlpha = alpha;
 
         for (int i = 0; i < moves.length(); i += 4) {
             String move = moves.substring(i, i + 4);
+            long newHashKey = zobrist.hashPiece(hashKey, move, boards, castleFlags, white);
             long[] nextBoards = game.makeMove(move, boards);
-            if (!game.kingSafe(white, nextBoards)) {
-                continue;
-            }
 
             legalMoves++;
-            boolean[] nextFlags = Arrays.copyOf(castleFlags, castleFlags.length);
-            game.updateCastling(move, nextBoards, nextFlags);
-            score = -alphaBeta(-beta, -alpha, depth - 1, nextBoards, nextFlags, !white);
+            boolean[] nextFlags = game.updateCastling(move, nextBoards, castleFlags);
+            score = -alphaBeta(-beta, -alpha, depth - 1, nextBoards, nextFlags, !white, newHashKey);
 
             if (score > alpha) {
                 if (score >= beta) {
+                    TranspositionTable tt = new TranspositionTable(depth, hash_beta, move, score);
+                    table.put(hashKey, tt);
+
+                    // TODO
+                    // rating.killerMoves[1][ply] = rating.killerMoves[0][ply];
+//                    rating.killerMoves[0][ply] = move;
+
                     return beta;
                 }
+                hashFlag = hash_exact;
                 alpha = score;
                 bestMove = move;
 
@@ -83,7 +114,7 @@ public class Engine {
 
         if (legalMoves == 0) {
             if (!game.kingSafe(white, boards)) {
-                return -mateScore + globalDepth - depth;
+                return -mateScore + ply;
             } else {
                 return 0;
             }
@@ -93,15 +124,17 @@ public class Engine {
             this.bestMove = bestMove;
         }
 
+        TranspositionTable tt = new TranspositionTable(depth, hashFlag, bestMove, alpha);
+        table.put(hashKey, tt);
         return alpha;
     }
 
-    public String sortMoves(String moves, long[] boards, boolean white) {
+    public String sortMoves(String moves, long[] boards, boolean white, int ply) {
         int[] moveScores = new int[moves.length() / 4];
 
         for (int i = 0; i < moves.length(); i += 4) {
             String move = moves.substring(i, i + 4);
-            moveScores[i / 4] = rating.scoreMove(move, boards, white);
+            moveScores[i / 4] = rating.scoreMove(move, boards, white, ply);
         }
 
         StringBuilder sortedMoves = new StringBuilder();
@@ -123,7 +156,7 @@ public class Engine {
     int costam = 0;
 
     public int quiescence(int alpha, int beta, long[] boards, boolean[] castleFlags, boolean white) {
-        costam++;
+//        costam++;
         int score = rating.evaluate(boards, white);
         return score;
 
