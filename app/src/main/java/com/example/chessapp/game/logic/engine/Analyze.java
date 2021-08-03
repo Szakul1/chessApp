@@ -38,7 +38,7 @@ public class Analyze {
             bestMoves[i / 5] = engine.bestMove;
             bestScores[i / 5] = score;
             String move = moves.substring(i, i + 4);
-            hashKey = zobrist.hashPiece(hashKey, move, boards, castleFlags, white);
+//            hashKey = zobrist.hashPiece(hashKey, move, boards, castleFlags, white);
             castleFlags = game.updateCastling(move, boards, castleFlags);
             boards = game.makeMove(move, boards);
 

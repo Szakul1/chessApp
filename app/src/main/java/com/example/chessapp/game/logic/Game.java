@@ -143,13 +143,9 @@ public class Game {
      */
 
     public void makeRealMove(String move, boolean white) {
-        //debugging
-//        long hashKey = zobrist.generateHashKey(boards, castleFlags, white);
-        hashKey = zobrist.hashPiece(hashKey, move, boards, castleFlags, white);
-//        Log.d("test", "is: " + hashKey);
+//        hashKey = zobrist.hashPiece(hashKey, move, boards, castleFlags, white);
         castleFlags = updateCastling(move, boards, castleFlags);
         boards = makeMove(move, boards);
-//        Log.d("test", "should: " + zobrist.generateHashKey(boards, castleFlags, !white));
         moveHistory += move + updateBoard(move);
     }
 
