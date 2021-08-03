@@ -41,6 +41,7 @@ public class Analyze {
             hashKey = zobrist.hashPiece(hashKey, move, boards, castleFlags, white);
             castleFlags = game.updateCastling(move, boards, castleFlags);
             boards = game.makeMove(move, boards);
+
             white = !white;
             score = engine.scoreMove(boards, castleFlags, white, hashKey);
             score = white ? score : -score;
@@ -75,4 +76,5 @@ public class Analyze {
         }
         return currentMove - 1;
     }
+
 }

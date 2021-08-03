@@ -451,7 +451,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     @SuppressLint("SetTextI18n")
     public void updateBar(int value, int mate) {
         if (mate == -1) {
-            progressText.setText("" + value);
+            progressText.setText("" + value / 100.0);
         } else {
             progressText.setText("Mate in " + mate);
         }
@@ -505,7 +505,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
 
         new Thread(() -> {
             Analyze analyze;
-            analyze = game.startAnalyze(color, endDialog.findViewById(R.id.loading_bar));
+            analyze = game.startAnalyze(true, endDialog.findViewById(R.id.loading_bar));
             repaint();
             forwardButton.setOnClickListener(view -> {
                 int currentMove = analyze.moveForward();
@@ -538,11 +538,11 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         bestMove.setText(analyze.bestMoves[currentMove]);
         int score = analyze.bestScores[currentMove];
         if (score >= 0) {
-            bestScore.setText("+" + score);
+            bestScore.setText("+" + score / 100.0);
             bestScore.setTextColor(Color.BLACK);
             bestScore.setBackgroundColor(Color.WHITE);
         } else {
-            bestScore.setText("" + score);
+            bestScore.setText("" + score / 100.0);
             bestScore.setTextColor(Color.WHITE);
             bestScore.setBackgroundColor(Color.BLACK);
         }
@@ -550,11 +550,11 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         score = analyze.moveScores[currentMove];
         updateBar(score, -1);
         if (score >= 0) {
-            actualScore.setText("+" + score);
+            actualScore.setText("+" + score / 100.0);
             actualScore.setTextColor(Color.BLACK);
             actualScore.setBackgroundColor(Color.WHITE);
         } else {
-            actualScore.setText("" + score);
+            actualScore.setText("" + score / 100.0);
             actualScore.setTextColor(Color.WHITE);
             actualScore.setBackgroundColor(Color.BLACK);
         }

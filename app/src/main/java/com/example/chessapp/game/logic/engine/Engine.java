@@ -27,6 +27,7 @@ public class Engine {
     }
 
     public int scoreMove(long[] boards, boolean[] castleFlags, boolean white, long hashKey) {
+        bestMove = "";
         return alphaBeta(-infinity, infinity, globalDepth - 1, boards, castleFlags, white, hashKey);
     }
 
@@ -37,6 +38,7 @@ public class Engine {
         test = 0;
         depth0 = 0;
         int score=0;
+        bestMove = "";
         // TODO iterative deepening
         for (int i = globalDepth; i <= globalDepth; i++) {
             nodes = 0;
@@ -61,18 +63,19 @@ public class Engine {
                           boolean white, long hashKey) {
         int hashFlag = hash_alpha;
         int score;
-        if (table.containsKey(hashKey)) {
-            TranspositionTable tt = table.get(hashKey);
-            Integer val = tt.readEntry(alpha, beta, depth);
-            if (val != null) {
-                if (depth == globalDepth) {
-                    this.bestMove = tt.best;
-                }
-                return val;
-            } else {
-                test++;
-            }
-        }
+        // TODO
+//        if (table.containsKey(hashKey)) {
+//            TranspositionTable tt = table.get(hashKey);
+//            Integer val = tt.readEntry(alpha, beta, depth);
+//            if (val != null) {
+//                if (depth == globalDepth) {
+//                    this.bestMove = tt.best;
+//                }
+//                return val;
+//            } else {
+//                test++;
+//            }
+//        }
 
         nodes++;
         if (depth == 0) {

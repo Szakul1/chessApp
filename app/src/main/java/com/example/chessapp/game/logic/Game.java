@@ -115,6 +115,15 @@ public class Game {
         return -1;
     }
 
+    public static void printBoard(char[][] board) {
+        String output = "";
+        for (char[] chars : board) {
+            for (char aChar : chars) output += aChar;
+            output += '\n';
+        }
+        Log.d("test", output);
+    }
+
     private void resetBoard() {
         chessBoard = new char[8][8];
         for (int i = 0; i < startingBoard.length; i++)
@@ -729,9 +738,9 @@ public class Game {
         long getMoves(int location);
     }
 
-    public String possibleK(long ABoard) {
+    public String possibleK(long KBoard) {
         StringBuilder list = new StringBuilder();
-        int location = Long.numberOfTrailingZeros(ABoard);
+        int location = Long.numberOfTrailingZeros(KBoard);
         long moves = location > 9 ?
                 KING_SPAN << (location - 9) :
                 KING_SPAN >> (9 - location);
