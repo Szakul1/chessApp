@@ -118,7 +118,7 @@ public class Rating {
     String[][] historyMoves = new String[12][64];
 
     // pawn positional score
-    private final int pawn_score[] =
+    private final int[] pawn_score =
             {
                     90, 90, 90, 90, 90, 90, 90, 90,
                     30, 30, 30, 40, 40, 30, 30, 30,
@@ -131,7 +131,7 @@ public class Rating {
             };
 
     // knight positional score
-    private final int knight_score[] =
+    private final int[] knight_score =
             {
                     -5, 0, 0, 0, 0, 0, 0, -5,
                     -5, 0, 0, 10, 10, 0, 0, -5,
@@ -144,7 +144,7 @@ public class Rating {
             };
 
     // bishop positional score
-    private final int bishop_score[] =
+    private final int[] bishop_score =
             {
                     0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0,
@@ -158,7 +158,7 @@ public class Rating {
             };
 
     // rook positional score
-    private final int rook_score[] =
+    private final int[] rook_score =
             {
                     50, 50, 50, 50, 50, 50, 50, 50,
                     50, 50, 50, 50, 50, 50, 50, 50,
@@ -172,7 +172,7 @@ public class Rating {
             };
 
     // king positional score
-    private final int king_score[] =
+    private final int[] king_score =
             {
                     0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 5, 5, 5, 5, 0, 0,
@@ -184,7 +184,7 @@ public class Rating {
                     0, 0, 5, 0, -15, 0, 10, 0
             };
 
-    private int[] pieceScores = {
+    private final int[] pieceScores = {
             100, 300, 350, 500, 900, 10_000,
             -100, -300, -350, -500, -900, -10_000
     };

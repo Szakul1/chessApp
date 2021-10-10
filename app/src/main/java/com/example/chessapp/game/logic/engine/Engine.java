@@ -10,7 +10,6 @@ import static com.example.chessapp.game.logic.BitBoards.*;
 
 public class Engine {
     private final Game game;
-    private final Zobrist zobrist;
     public static int globalDepth = 4;
     private final static int mateScore = 49000;
     private final static int infinity = 50000;
@@ -18,40 +17,29 @@ public class Engine {
     public String bestMove;
     public int mate = -1;
 
-    public HashMap<Long, TranspositionTable> table = new HashMap();
-
-    public Engine(Game game, Zobrist zobrist) {
+    public Engine(Game game) {
         this.game = game;
-        this.zobrist = zobrist;
         rating = new Rating();
     }
 
-    public int scoreMove(long[] boards, boolean[] castleFlags, boolean white, long hashKey) {
+    public int scoreMove(long[] boards, boolean[] castleFlags, boolean white) {
         bestMove = "";
-        return alphaBeta(-infinity, infinity, globalDepth - 1, boards, castleFlags, white, hashKey);
+        return alphaBeta(-infinity, infinity, globalDepth - 1, boards, castleFlags, white);
     }
 
-    public int findBestMove(long[] boards, boolean[] castleFlags, boolean white, long hashKey) {
+    public int findBestMove(long[] boards, boolean[] castleFlags, boolean white) {
         bestMove = "";
         mate = -1;
         nodes = 0;
         test = 0;
         depth0 = 0;
-        int score=0;
+        int score = 0;
         bestMove = "";
-        // TODO iterative deepening
-        for (int i = globalDepth; i <= globalDepth; i++) {
-            nodes = 0;
-            score = alphaBeta(-infinity, infinity, i, boards, castleFlags, white, hashKey);
-            Log.d("test", "nodes: " + nodes);
-        }
+        score = alphaBeta(-infinity, infinity, globalDepth, boards, castleFlags, white);
         if (Math.abs(score) >= mateScore - globalDepth) {
             mate = (mateScore - Math.abs(score)) / 2;
         }
 
-        Log.d("test", "size: " + table.size());
-//        Log.d("test", "depth0: " + depth0);
-//        Log.d("test", "test: " + test);
         return score;
     }
 
@@ -60,29 +48,14 @@ public class Engine {
     int test = 0;
 
     private int alphaBeta(int alpha, int beta, int depth, long[] boards, boolean[] castleFlags,
-                          boolean white, long hashKey) {
-        int hashFlag = hash_alpha;
+                          boolean white) {
         int score;
-        // TODO
-//        if (table.containsKey(hashKey)) {
-//            TranspositionTable tt = table.get(hashKey);
-//            Integer val = tt.readEntry(alpha, beta, depth);
-//            if (val != null) {
-//                if (depth == globalDepth) {
-//                    this.bestMove = tt.best;
-//                }
-//                return val;
-//            } else {
-//                test++;
-//            }
-//        }
 
         nodes++;
         if (depth == 0) {
             depth0++;
             costam = 0;
             score = quiescence(alpha, beta, boards, castleFlags, white);
-//            Log.d("test", costam+"");
             nodes += costam;
             return score;
         }
@@ -96,17 +69,14 @@ public class Engine {
 
         for (int i = 0; i < moves.length(); i += 4) {
             String move = moves.substring(i, i + 4);
-            long newHashKey = zobrist.hashPiece(hashKey, move, boards, castleFlags, white);
             long[] nextBoards = game.makeMove(move, boards);
 
             legalMoves++;
             boolean[] nextFlags = game.updateCastling(move, boards, castleFlags);
-            score = -alphaBeta(-beta, -alpha, depth - 1, nextBoards, nextFlags, !white, newHashKey);
+            score = -alphaBeta(-beta, -alpha, depth - 1, nextBoards, nextFlags, !white);
 
             if (score > alpha) {
                 if (score >= beta) {
-                    TranspositionTable tt = new TranspositionTable(depth, hash_beta, move, score);
-                    table.put(hashKey, tt);
 
                     // TODO
                     // rating.killerMoves[1][ply] = rating.killerMoves[0][ply];
@@ -114,10 +84,8 @@ public class Engine {
 
                     return beta;
                 }
-                hashFlag = hash_exact;
                 alpha = score;
                 bestMove = move;
-
             }
         }
 
@@ -133,8 +101,6 @@ public class Engine {
             this.bestMove = bestMove;
         }
 
-        TranspositionTable tt = new TranspositionTable(depth, hashFlag, bestMove, alpha);
-        table.put(hashKey, tt);
         return alpha;
     }
 

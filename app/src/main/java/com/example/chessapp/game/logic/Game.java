@@ -8,7 +8,6 @@ import static com.example.chessapp.game.logic.BitBoards.*;
 import com.example.chessapp.game.frontend.Board;
 import com.example.chessapp.game.logic.engine.Analyze;
 import com.example.chessapp.game.logic.engine.Engine;
-import com.example.chessapp.game.logic.engine.Zobrist;
 
 import java.util.Arrays;
 
@@ -26,7 +25,6 @@ public class Game {
             {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
             {'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'},
             {'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'}};
-    private final Zobrist zobrist;
     public char[][] chessBoard;
     //    public char[][] chessBoard = {
 //            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
@@ -64,7 +62,6 @@ public class Game {
                     0x804020100000000L, 0x402010000000000L, 0x201000000000000L, 0x100000000000000L};
 
     public String moveHistory = "";
-    public long hashKey;
 
     /*
         Initializing board
@@ -133,9 +130,7 @@ public class Game {
     public Game(Board board, boolean white) {
         this.board = board;
         arrayToBitboards();
-        zobrist = new Zobrist();
-        hashKey = zobrist.generateHashKey(boards, castleFlags, white);
-        engine = new Engine(this, zobrist);
+        engine = new Engine(this);
     }
 
     /*
@@ -193,7 +188,7 @@ public class Game {
     public void response(boolean white) {
         board.repaint();
 
-        int score = engine.findBestMove(boards, castleFlags, white, hashKey);
+        int score = engine.findBestMove(boards, castleFlags, white);
         score = white ? score : -score;
         String move = engine.bestMove;
 
@@ -290,7 +285,7 @@ public class Game {
     }
 
     public int scoreMove(boolean white) {
-        return engine.scoreMove(boards, castleFlags, white, hashKey);
+        return engine.scoreMove(boards, castleFlags, white);
     }
 
     /*
@@ -340,7 +335,7 @@ public class Game {
     public Analyze startAnalyze(boolean white, ProgressBar bar) {
         arrayToBitboards();
         Analyze analyze = new Analyze(this, engine);
-        analyze.analyzeGame(moveHistory, boards, castleFlags, white, bar, zobrist);
+        analyze.analyzeGame(moveHistory, boards, castleFlags, white, bar);
         resetBoard();
         return analyze;
     }
