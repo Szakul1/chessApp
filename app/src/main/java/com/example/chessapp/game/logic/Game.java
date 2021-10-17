@@ -67,7 +67,7 @@ public class Game {
         Initializing board
      */
 
-    private void arrayToBitboards() {
+    public void arrayToBitboards() {
         boards = new long[]{0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,};
         castleFlags = new boolean[]{true, true, true, true};
         resetBoard();
@@ -138,7 +138,6 @@ public class Game {
      */
 
     public void makeRealMove(String move, boolean white) {
-//        hashKey = zobrist.hashPiece(hashKey, move, boards, castleFlags, white);
         castleFlags = updateCastling(move, boards, castleFlags);
         boards = makeMove(move, boards);
         moveHistory += move + updateBoard(move);
@@ -200,8 +199,6 @@ public class Game {
     }
 
     public long[] makeMove(String move, long[] pieces) {
-        if (move.charAt(3) == 'C')
-            move = getCastleMove(move);
         long tempWR = makeMoveForBoard(pieces[WR], move, 'R');
         long tempBR = makeMoveForBoard(pieces[BR], move, 'r');
         return new long[]{
@@ -237,13 +234,13 @@ public class Game {
             String move = moves.substring(i, i + 4);
             long[] nextBoards = makeMove(move, boards);
             long unsafe = white ? unsafeForWhite(nextBoards) : unsafeForBlack(nextBoards);
-            // checking castle square safe
-            if (move.equals("CWQC") && (unsafe & (1L << 59)) != 0 ||
-                    move.equals("CWKC") && (unsafe & (1L << 61)) != 0 ||
-                    move.equals("CBQC") && (unsafe & (1L << 3)) != 0 ||
-                    move.equals("CBKC") && (unsafe & (1L << 5)) != 0) {
-                continue;
-            }
+            // checking castle square safe TODO
+//            if (move.equals("CWQC") && (unsafe & (1L << 59)) != 0 ||
+//                    move.equals("CWKC") && (unsafe & (1L << 61)) != 0 ||
+//                    move.equals("CBQC") && (unsafe & (1L << 3)) != 0 ||
+//                    move.equals("CBKC") && (unsafe & (1L << 5)) != 0) {
+//                continue;
+//            }
             if ((unsafe & (white ? nextBoards[WK] : nextBoards[BK])) != 0) {
                 continue;
             }
@@ -420,10 +417,10 @@ public class Game {
         return false;
     }
 
-    public static boolean[] updateCastling(String move, long[] pieces, boolean[] castleFlags) {
+    public boolean[] updateCastling(String move, long[] pieces, boolean[] castleFlags) {
         boolean[] flags = Arrays.copyOf(castleFlags, castleFlags.length);
         if (move.charAt(3) == 'C')
-                move = getCastleMove(move);
+            move = getCastleMove(move);
         if (Character.isDigit(move.charAt(3))) {// 'regular' move
             int start = getValFromString(move, 0) * 8 + getValFromString(move, 1);
             if (((1L << start) & pieces[WK]) != 0) {
@@ -432,13 +429,13 @@ public class Game {
             } else if (((1L << start) & pieces[BK]) != 0) {
                 flags[CBK] = false;
                 flags[CBQ] = false;
-            } else if (((1L << start) & pieces[WR] & (1L << 63)) != 0) {
+            } else if (((1L << start) & pieces[WR] & (1L << CASTLE_ROOKS[0])) != 0) {
                 flags[CWK] = false;
-            } else if (((1L << start) & pieces[WR] & (1L << 56)) != 0) {
+            } else if (((1L << start) & pieces[WR] & (1L << CASTLE_ROOKS[1])) != 0) {
                 flags[CWQ] = false;
-            } else if (((1L << start) & pieces[BR] & (1L << 7)) != 0) {
+            } else if (((1L << start) & pieces[BR] & (1L << CASTLE_ROOKS[2])) != 0) {
                 flags[CBK] = false;
-            } else if (((1L << start) & pieces[BR] & 1L) != 0) {
+            } else if (((1L << start) & pieces[BR] & (1L << CASTLE_ROOKS[3])) != 0) {
                 flags[CBQ] = false;
             }
         }
@@ -475,6 +472,8 @@ public class Game {
     }
 
     public long makeMoveForBoard(long board, String move, char promotionType) {
+        if (move.charAt(3) == 'C')
+            move = getCastleMove(move);
         if (Character.isDigit(move.charAt(3))) { // 'regular' move
             int start = (getValFromString(move, 0) * 8) + (getValFromString(move, 1));
             int end = (getValFromString(move, 2) * 8) + (getValFromString(move, 3));
@@ -515,16 +514,13 @@ public class Game {
                 board |= (1L << end);
             }
         } else {
-            System.out.print("ERROR: Invalid move type");
+            System.out.println("ERROR: Invalid move type: " + move);
         }
         return board;
     }
 
     public long makeMoveCastle(long rookBoard, long kingBoard, String move, char type) {
-        int start = (getValFromString(move, 0) * 8) + (getValFromString(move, 1));
-        move = getCastleMove(move);
-        if ((((kingBoard >> start) & 1) == 1) &&
-                (("CBQC".equals(move)) || ("CBKC".equals(move)) || ("CWKC".equals(move)) || ("CWQC".equals(move)))) {
+        if ((("CBQC".equals(move)) || ("CBKC".equals(move)) || ("CWKC".equals(move)) || ("CWQC".equals(move)))) {
             if (type == 'R') {
                 switch (move) {
                     case "CWQC":
@@ -576,9 +572,10 @@ public class Game {
         notMyPieces = ~(myPieces);
         occupied = getOccupied(pieces);
         empty = ~occupied;
+        long unSafe = unsafeForWhite(pieces);
         return possibleWP(pieces[WP], pieces[BP], pieces[EP]) + possibleN(pieces[WN]) + possibleB(pieces[WB])
                 + possibleR(pieces[WR]) + possibleQ(pieces[WQ]) + possibleK(pieces[WK])
-                + possibleCW(CWK, CWQ);
+                + possibleCW(CWK, CWQ, unSafe, pieces[WK], pieces[WR]);
     }
 
     public String possibleMovesB(long[] pieces, boolean CBK, boolean CBQ) {
@@ -586,9 +583,10 @@ public class Game {
         notMyPieces = ~(myPieces);
         occupied = getOccupied(pieces);
         empty = ~occupied;
+        long unSafe = unsafeForBlack(pieces);
         return possibleBP(pieces[BP], pieces[WP], pieces[EP]) + possibleN(pieces[BN]) + possibleB(pieces[BB])
                 + possibleR(pieces[BR]) + possibleQ(pieces[BQ]) + possibleK(pieces[BK])
-                + possibleCB(CBK, CBQ);
+                + possibleCB(CBK, CBQ, unSafe, pieces[BK], pieces[BR]);
     }
 
     public static long getMyPieces(boolean white, long[] pieces) {
@@ -657,10 +655,10 @@ public class Game {
 
         // promotion: y1, y2, promotion, 'P'
 
-        pawnMoves = (BP << 7) & notMyPieces & occupied & rowMasks8[7] & ~columnMasks8[0]; // capture right
+        pawnMoves = (BP << 7) & notMyPieces & occupied & rowMasks8[7] & ~columnMasks8[7]; // capture right
         addPromotion(list, pawnMoves, 1, false);
 
-        pawnMoves = (BP << 9) & notMyPieces & occupied & rowMasks8[7] & ~columnMasks8[7]; // capture left
+        pawnMoves = (BP << 9) & notMyPieces & occupied & rowMasks8[7] & ~columnMasks8[0]; // capture left
         addPromotion(list, pawnMoves, -1, false);
 
         pawnMoves = (BP << 8) & notMyPieces & empty & rowMasks8[7]; // move 1 up
@@ -785,26 +783,30 @@ public class Game {
         addMove(list, location, moves);
     }
 
-    public String possibleCW(boolean castleWK, boolean castleWQ) {
+    public String possibleCW(boolean castleWK, boolean castleWQ, long unsafe, long king, long rook) {
         StringBuilder list = new StringBuilder();
         // must empty places
-        if (castleWK && (occupied & ((1L << 61) | (1L << 62))) == 0) {
-            list.append("CWKC");
-        }
-        if (castleWQ && (occupied & ((1L << 57) | (1L << 58) | (1L << 59))) == 0) {
-            list.append("CWQC");
+        if ((unsafe & king) == 0) {
+            if (castleWK && (((1L << CASTLE_ROOKS[0]) & rook) != 0) && ((occupied | unsafe) & ((1L << 61) | (1L << 62))) == 0) {
+                list.append("CWKC");
+            }
+            if (castleWQ && (((1L << CASTLE_ROOKS[1]) & rook) != 0) && ((occupied | (unsafe & ~(1L << 57))) & ((1L << 57) | (1L << 58) | (1L << 59))) == 0) {
+                list.append("CWQC");
+            }
         }
         return list.toString();
     }
 
-    public String possibleCB(boolean castleBK, boolean castleBQ) {
+    public String possibleCB(boolean castleBK, boolean castleBQ, long unsafe, long king, long rook) {
         StringBuilder list = new StringBuilder();
         // must empty places
-        if (castleBK && (occupied & ((1L << 5) | (1L << 6))) == 0) {
-            list.append("CBKC");
-        }
-        if (castleBQ && (occupied & ((1L << 1) | (1L << 2) | (1L << 3))) == 0) {
-            list.append("CBQC");
+        if ((unsafe & king) == 0) {
+            if (castleBK && (((1L << CASTLE_ROOKS[2]) & rook) != 0) && ((occupied | unsafe) & ((1L << 5) | (1L << 6))) == 0) {
+                list.append("CBKC");
+            }
+            if (castleBQ && (((1L << CASTLE_ROOKS[3]) & rook) != 0) && ((occupied | (unsafe & ~(1L << 1))) & ((1L << 1) | (1L << 2) | (1L << 3))) == 0) {
+                list.append("CBQC");
+            }
         }
         return list.toString();
     }
@@ -879,4 +881,19 @@ public class Game {
         return occupied;
     }
 
+    public long[] getBoards() {
+        return boards;
+    }
+
+    public void setBoards(long[] boards) {
+        this.boards = boards;
+    }
+
+    public boolean[] getCastleFlags() {
+        return castleFlags;
+    }
+
+    public void setCastleFlags(boolean[] castleFlags) {
+        this.castleFlags = castleFlags;
+    }
 }
