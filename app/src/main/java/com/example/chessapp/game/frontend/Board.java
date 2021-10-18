@@ -12,7 +12,6 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.media.MediaPlayer;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -29,9 +28,12 @@ import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.chessapp.MainActivity;
 import com.example.chessapp.R;
-import com.example.chessapp.game.logic.engine.Analyze;
+import com.example.chessapp.game.Move;
 import com.example.chessapp.game.logic.Game;
+import com.example.chessapp.game.logic.engine.Analyze;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -56,10 +58,10 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     private boolean animation;
     private float animationX, animationY;
     private boolean analyzing;
-    private String promotionMove;
+    private Move promotionMove;
     private boolean whiteTurn;
     public String finishedGame;
-    private String moves;
+    private List<Move> moves;
 
     // components
     private WindowManager.LayoutParams lp;
@@ -134,7 +136,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         updateBar(0, -1);
         analyzing = false;
         whiteTurn = true;
-        moves = "";
+        moves = new ArrayList<>();
         finishedGame = null;
         game = new Game(this, color);
         // if black make computer response
@@ -186,10 +188,8 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         Paint p = new Paint();
         p.setARGB(255, 211, 211, 211);
         int radius;
-        for (int i = 0; i < moves.length(); i += 2) {
-            int y = Character.getNumericValue(moves.charAt(i));
-            int x = Character.getNumericValue(moves.charAt(i + 1));
-            if (game.chessBoard[y][x] != ' ') {
+        for (Move move : moves) {
+            if (game.chessBoard[move.endRow][move.endCol] != ' ') {
                 p.setStyle(Paint.Style.STROKE);
                 p.setStrokeWidth(10);
                 radius = 60;
@@ -198,8 +198,8 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
                 radius = 20;
             }
 
-            canvas.drawCircle(x * pieceWidth + pieceWidth / 2,
-                    y * pieceHeight + pieceWidth / 2, radius, p);
+            canvas.drawCircle(move.endCol * pieceWidth + pieceWidth / 2,
+                    move.endRow * pieceHeight + pieceWidth / 2, radius, p);
         }
     }
 
@@ -342,7 +342,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             showEndDialog();
             return false;
         }
-        moves = "";
+        moves.clear();
         int newX = (int) (event.getX() / getWidth() * boardSize);
         int newY = (int) (event.getY() / getHeight() * boardSize);
         if (!color) {
@@ -396,7 +396,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         //            animation(newY, newX);
     }
 
-    public void showDialog(String promotionMove) {
+    public void showDialog(Move promotionMove) {
         this.promotionMove = promotionMove;
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 
@@ -441,8 +441,8 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         if (!whiteTurn)
             piece = Character.toLowerCase(piece);
         dialog.cancel();
-        String move = promotionMove.substring(0, 2) + piece + promotionMove.charAt(3);
-        game.makeRealMove(move, whiteTurn);
+        promotionMove.promotionPiece = piece;
+        game.makeRealMove(promotionMove);
 
         updateGame();
         repaint();
@@ -508,24 +508,15 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             analyze = game.startAnalyze(true, endDialog.findViewById(R.id.loading_bar));
             repaint();
             forwardButton.setOnClickListener(view -> {
-                int currentMove = analyze.moveForward();
-                if (currentMove == 0) {
-                    bestScore.setVisibility(VISIBLE);
-                    bestMove.setVisibility(VISIBLE);
-                    actualScore.setVisibility(VISIBLE);
-                    actualMove.setVisibility(VISIBLE);
-                }
-                if (currentMove != -1) {
-                    updateAnalyze(analyze, currentMove);
-                }
+                updateAnalyze(analyze, analyze.moveForward());
             });
             backButton.setOnClickListener(view -> {
                 int currentMove = analyze.moveBack();
-                if (currentMove == -2) {
+                if (currentMove == -1) {
                     repaint();
                     hideAnalyze();
                     updateBar(0, -1);
-                } else if (currentMove > -1) {
+                } else {
                     updateAnalyze(analyze, currentMove);
                 }
             });
@@ -546,7 +537,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             bestScore.setTextColor(Color.WHITE);
             bestScore.setBackgroundColor(Color.BLACK);
         }
-        actualMove.setText(analyze.getMove(currentMove * 5));
+        actualMove.setText(analyze.moves.get(currentMove).toString());
         score = analyze.moveScores[currentMove];
         updateBar(score, -1);
         if (score >= 0) {

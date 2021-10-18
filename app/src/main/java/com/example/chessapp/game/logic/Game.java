@@ -1,15 +1,39 @@
 package com.example.chessapp.game.logic;
 
+import static com.example.chessapp.game.MoveType.CASTLE;
+import static com.example.chessapp.game.MoveType.EN_PASSANT;
+import static com.example.chessapp.game.MoveType.NORMAL;
+import static com.example.chessapp.game.MoveType.PROMOTION;
+import static com.example.chessapp.game.logic.BitBoards.BB;
+import static com.example.chessapp.game.logic.BitBoards.BK;
+import static com.example.chessapp.game.logic.BitBoards.BN;
+import static com.example.chessapp.game.logic.BitBoards.BP;
+import static com.example.chessapp.game.logic.BitBoards.BQ;
+import static com.example.chessapp.game.logic.BitBoards.BR;
+import static com.example.chessapp.game.logic.BitBoards.CBK;
+import static com.example.chessapp.game.logic.BitBoards.CBQ;
+import static com.example.chessapp.game.logic.BitBoards.CWK;
+import static com.example.chessapp.game.logic.BitBoards.CWQ;
+import static com.example.chessapp.game.logic.BitBoards.EP;
+import static com.example.chessapp.game.logic.BitBoards.WB;
+import static com.example.chessapp.game.logic.BitBoards.WK;
+import static com.example.chessapp.game.logic.BitBoards.WN;
+import static com.example.chessapp.game.logic.BitBoards.WP;
+import static com.example.chessapp.game.logic.BitBoards.WQ;
+import static com.example.chessapp.game.logic.BitBoards.WR;
+
 import android.util.Log;
 import android.widget.ProgressBar;
 
-import static com.example.chessapp.game.logic.BitBoards.*;
-
+import com.example.chessapp.game.Move;
 import com.example.chessapp.game.frontend.Board;
 import com.example.chessapp.game.logic.engine.Analyze;
 import com.example.chessapp.game.logic.engine.Engine;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.ListIterator;
 
 public class Game {
     private final Board board;
@@ -61,7 +85,7 @@ public class Game {
                     0x8040201008040201L, 0x4020100804020100L, 0x2010080402010000L, 0x1008040201000000L,
                     0x804020100000000L, 0x402010000000000L, 0x201000000000000L, 0x100000000000000L};
 
-    public String moveHistory = "";
+    public List<Move> moveHistory = new ArrayList<>();
 
     /*
         Initializing board
@@ -137,49 +161,24 @@ public class Game {
         Making moves
      */
 
-    public void makeRealMove(String move, boolean white) {
+    public void makeRealMove(Move move) {
         castleFlags = updateCastling(move, boards, castleFlags);
         boards = makeMove(move, boards);
-        moveHistory += move + updateBoard(move);
+        move.capturePiece = updateBoard(move);
+        moveHistory.add(move);
     }
 
-    public boolean checkMoveAndMake(int row, int col, int newRow, int newCol, boolean white) {
-        String possibleMoves = possibleMoves(white);
-        String move = "";
-        if (Character.toLowerCase(chessBoard[row][col]) == 'p') {
-            if (white ? newRow == 0 : newRow == 7) { // promotion
-                move = "" + col + newCol + (white ? 'Q' : 'q') + 'P';
-                if (movesContains(move, possibleMoves)) {
+    public boolean checkMoveAndMake(int startRow, int startCol, int endRow, int endCol, boolean white) {
+        List<Move> possibleMoves = possibleMoves(white);
+        for (Move move : possibleMoves) {
+            if (startRow == move.startRow && startCol == move.startCol && endRow == move.endRow && endCol == move.endCol) {
+                if (move.type == PROMOTION) {
                     board.showDialog(move);
                     return false;
                 }
-            } else if (col != newCol && chessBoard[newRow][newCol] == ' ') {
-                move = "" + col + newCol + (white ? 'W' : 'B') + 'E';
-            } else {
-                move = "" + row + col + newRow + newCol;
+                makeRealMove(move);
+                return true;
             }
-        } else {
-            move = "" + row + col + newRow + newCol;
-            if (Character.toLowerCase(chessBoard[row][col]) == 'k') {
-                switch (move) {
-                    case "0402":
-                        move = "CBQC";
-                        break;
-                    case "0406":
-                        move = "CBKC";
-                        break;
-                    case "7472":
-                        move = "CWQC";
-                        break;
-                    case "7476":
-                        move = "CWKC";
-                        break;
-                }
-            }
-        }
-        if (movesContains(move, possibleMoves)) {
-            makeRealMove(move, white);
-            return true;
         }
         return false;
     }
@@ -189,29 +188,30 @@ public class Game {
 
         int score = engine.findBestMove(boards, castleFlags, white);
         score = white ? score : -score;
-        String move = engine.bestMove;
+        Move move = engine.bestMove;
 
-        if (!move.isEmpty()) {
-            makeRealMove(move, white);
+        boolean isMove = move != null;
+        if (isMove) {
+            makeRealMove(move);
         }
-        finishGame(move.length(), white);
+        finishGame(isMove, white);
         board.updateBar(score, engine.mate);
     }
 
-    public long[] makeMove(String move, long[] pieces) {
+    public long[] makeMove(Move move, long[] pieces) {
         long tempWR = makeMoveForBoard(pieces[WR], move, 'R');
         long tempBR = makeMoveForBoard(pieces[BR], move, 'r');
         return new long[]{
                 makeMoveForBoard(pieces[WP], move, 'P'),
                 makeMoveForBoard(pieces[WN], move, 'N'),
                 makeMoveForBoard(pieces[WB], move, 'B'),
-                makeMoveCastle(tempWR, pieces[WK] | pieces[BK], move, 'R'),
+                makeMoveCastle(tempWR, move, 'R'),
                 makeMoveForBoard(pieces[WQ], move, 'Q'),
                 makeMoveForBoard(pieces[WK], move, 'K'),
                 makeMoveForBoard(pieces[BP], move, 'p'),
                 makeMoveForBoard(pieces[BN], move, 'n'),
                 makeMoveForBoard(pieces[BB], move, 'b'),
-                makeMoveCastle(tempBR, pieces[WK] | pieces[BK], move, 'r'),
+                makeMoveCastle(tempBR, move, 'r'),
                 makeMoveForBoard(pieces[BQ], move, 'q'),
                 makeMoveForBoard(pieces[BK], move, 'k'),
                 makeMoveEP(pieces[WP] | pieces[BP], move),
@@ -222,16 +222,16 @@ public class Game {
         Getting moves
      */
 
-    public String possibleMoves(boolean white) {
+    public List<Move> possibleMoves(boolean white) {
         return possibleMoves(white, boards, castleFlags);
     }
 
-    public String possibleMoves(boolean white, long[] boards, boolean[] castleFlags) {
-        String moves = white ? possibleMovesW(boards, castleFlags[CWK], castleFlags[CWQ]) :
+    public List<Move> possibleMoves(boolean white, long[] boards, boolean[] castleFlags) {
+        List<Move> moves = white ? possibleMovesW(boards, castleFlags[CWK], castleFlags[CWQ]) :
                 possibleMovesB(boards, castleFlags[CBK], castleFlags[CBQ]);
-        StringBuilder possible = new StringBuilder();
-        for (int i = 0; i < moves.length(); i += 4) {
-            String move = moves.substring(i, i + 4);
+        ListIterator<Move> iterator = moves.listIterator();
+        while (iterator.hasNext()) {
+            Move move = iterator.next();
             long[] nextBoards = makeMove(move, boards);
             long unsafe = white ? unsafeForWhite(nextBoards) : unsafeForBlack(nextBoards);
             // checking castle square safe TODO
@@ -242,43 +242,23 @@ public class Game {
 //                continue;
 //            }
             if ((unsafe & (white ? nextBoards[WK] : nextBoards[BK])) != 0) {
-                continue;
+                iterator.remove();
             }
-            possible.append(move);
         }
-        return possible.toString();
+        return moves;
     }
 
-    public String getMovesForPiece(int row, int col, boolean white) {
-        String moves = possibleMoves(white);
-        StringBuilder list = new StringBuilder();
-        for (int i = 0; i < moves.length(); i += 4) {
-            String move = moves.substring(i, i + 4);
-            if (move.charAt(3) == 'C') {
-                move = getCastleMove(move);
-            }
-            int moveRow, moveCol, newRow, newCol;
-            if (Character.isDigit(move.charAt(3))) {// 'regular' move
-                moveRow = getValFromString(move, 0);
-                moveCol = getValFromString(move, 1);
-                newRow = getValFromString(move, 2);
-                newCol = getValFromString(move, 3);
-            } else {
-                moveCol = getValFromString(move, 0);
-                newCol = getValFromString(move, 1);
-                if (move.charAt(3) == 'P') {
-                    moveRow = white ? 1 : 6;
-                    newRow = white ? 0 : 7;
-                } else {
-                    moveRow = white ? 3 : 4;
-                    newRow = white ? 2 : 5;
-                }
-            }
-            if (moveRow == row && moveCol == col) {
-                list.append(newRow).append(newCol);
+    public List<Move> getMovesForPiece(int row, int col, boolean white) {
+        List<Move> moves = possibleMoves(white);
+        ListIterator<Move> iterator = moves.listIterator();
+
+        while (iterator.hasNext()) {
+            Move move = iterator.next();
+            if (move.startRow != row || move.startCol != col) {
+                iterator.remove();
             }
         }
-        return list.toString();
+        return moves;
     }
 
     public int scoreMove(boolean white) {
@@ -289,39 +269,36 @@ public class Game {
         Updating board
      */
 
-    public char updateBoard(String m) {
-        Move move = Move.parseMove(m);
-        char piece = chessBoard[move.targetRow][move.targetCol];
-        if (move.promotion) {
-            chessBoard[move.targetRow][move.targetCol] = move.promotionPiece;
+    public char updateBoard(Move move) {
+        char piece = chessBoard[move.endRow][move.endRow];
+        if (move.type == PROMOTION) {
+            chessBoard[move.endRow][move.endCol] = move.promotionPiece;
         } else {
-            chessBoard[move.targetRow][move.targetCol] = chessBoard[move.startRow][move.startCol];
+            chessBoard[move.endRow][move.endCol] = chessBoard[move.startRow][move.startCol];
         }
         chessBoard[move.startRow][move.startCol] = ' ';
-        if (move.castle) {
-            chessBoard[move.startRow][move.rookTargetCol] = chessBoard[move.startRow][move.rookStartCol];
+        if (move.type == CASTLE) {
+            chessBoard[move.startRow][move.rookEndCol] = chessBoard[move.startRow][move.rookStartCol];
             chessBoard[move.startRow][move.rookStartCol] = ' ';
-        } else if (move.enPassant) {
-            chessBoard[move.startRow][move.targetCol] = ' ';
+        } else if (move.type == EN_PASSANT) {
+            chessBoard[move.startRow][move.endCol] = ' ';
         }
         return piece;
     }
 
-    public void undoMove(String m, char piece) {
-        Move move = Move.parseMove(m);
-        if (move.promotion) {
-            boolean white = Character.isUpperCase(m.charAt(2));
+    public void undoMove(Move move) {
+        boolean white = Character.isUpperCase(chessBoard[move.endRow][move.endCol]);
+        if (move.type == PROMOTION) {
             chessBoard[move.startRow][move.startCol] = white ? 'P' : 'p';
         } else {
-            chessBoard[move.startRow][move.startCol] = chessBoard[move.targetRow][move.targetCol];
+            chessBoard[move.startRow][move.startCol] = chessBoard[move.endRow][move.endCol];
         }
-        chessBoard[move.targetRow][move.targetCol] = piece;
-        if (move.castle) {
-            chessBoard[move.startRow][move.rookStartCol] = chessBoard[move.startRow][move.rookTargetCol];
-            chessBoard[move.startRow][move.rookTargetCol] = ' ';
-        } else if (move.enPassant) {
-            boolean white = m.charAt(2) == 'W';
-            chessBoard[move.startRow][move.targetCol] = white ? 'p' : 'P';
+        chessBoard[move.endRow][move.endCol] = move.capturePiece;
+        if (move.type == CASTLE) {
+            chessBoard[move.startRow][move.rookStartCol] = chessBoard[move.startRow][move.rookEndCol];
+            chessBoard[move.startRow][move.rookEndCol] = ' ';
+        } else if (move.type == EN_PASSANT) {
+            chessBoard[move.startRow][move.endCol] = white ? 'p' : 'P';
         }
     }
 
@@ -340,29 +317,6 @@ public class Game {
     /*
         Other functions
      */
-
-    public static String getCastleMove(String move) {
-        switch (move) {
-            case "0402":
-                return "CBQC";
-            case "0406":
-                return "CBKC";
-            case "7472":
-                return "CWQC";
-            case "7476":
-                return "CWKC";
-
-            case "CBQC":
-                return "0402";
-            case "CBKC":
-                return "0406";
-            case "CWQC":
-                return "7472";
-            case "CWKC":
-                return "7476";
-        }
-        return move;
-    }
 
     public boolean kingSafe(boolean white, long[] pieces) {
         return white ? (pieces[WK] & unsafeForWhite(pieces)) == 0 :
@@ -383,12 +337,12 @@ public class Game {
     }
 
     public void gameFinished(boolean white) {
-        String moves = possibleMoves(white);
-        finishGame(moves.length(), white);
+        List<Move> moves = possibleMoves(white);
+        finishGame(!moves.isEmpty(), white);
     }
 
-    private void finishGame(int moveCounter, boolean white) {
-        if (moveCounter == 0) {
+    private void finishGame(boolean moveCounter, boolean white) {
+        if (!moveCounter) {
             if (kingSafe(white)) {
                 board.finishedGame = "Draw Stalemate";
             } else {
@@ -408,21 +362,10 @@ public class Game {
         Game logic
      */
 
-    private boolean movesContains(String move, String moves) {
-        for (int i = 0; i < moves.length(); i += 4) {
-            if (move.equals(moves.substring(i, i + 4))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public boolean[] updateCastling(String move, long[] pieces, boolean[] castleFlags) {
+    public boolean[] updateCastling(Move move, long[] pieces, boolean[] castleFlags) {
         boolean[] flags = Arrays.copyOf(castleFlags, castleFlags.length);
-        if (move.charAt(3) == 'C')
-            move = getCastleMove(move);
-        if (Character.isDigit(move.charAt(3))) {// 'regular' move
-            int start = getValFromString(move, 0) * 8 + getValFromString(move, 1);
+        if (move.type == NORMAL || move.type == CASTLE) {
+            int start = move.startRow * 8 + move.startCol;
             if (((1L << start) & pieces[WK]) != 0) {
                 flags[CWK] = false;
                 flags[CWQ] = false;
@@ -467,126 +410,89 @@ public class Game {
                 (movesAntiDiagonal & AntiDiagonalMasks8[checkPos2]);
     }
 
-    public static int getValFromString(String s, int index) {
-        return Character.getNumericValue(s.charAt(index));
-    }
-
-    public long makeMoveForBoard(long board, String move, char promotionType) {
-        if (move.charAt(3) == 'C')
-            move = getCastleMove(move);
-        if (Character.isDigit(move.charAt(3))) { // 'regular' move
-            int start = (getValFromString(move, 0) * 8) + (getValFromString(move, 1));
-            int end = (getValFromString(move, 2) * 8) + (getValFromString(move, 3));
-            if (((board >> start) & 1) == 1) {
-                board &= ~(1L << start);
-                board |= (1L << end);
+    public long makeMoveForBoard(long board, Move move, char promotionType) {
+        int start = move.startRow * 8 + move.startCol;
+        int end = move.endRow * 8 + move.endCol;
+        if (move.type != PROMOTION) {
+            if (((board >> start) & 1) == 1) { // it is this board
+                board &= ~(1L << start); // remove from start
+                board |= (1L << end); // add to end
             } else {
-                board &= ~(1L << end);
-            }
-        } else if (move.charAt(3) == 'P') {// pawn promotion
-            int start, end;
-            if (Character.isUpperCase(move.charAt(2))) {
-                start = Long.numberOfTrailingZeros(columnMasks8[getValFromString(move, 0)] & rowMasks8[1]);
-                end = Long.numberOfTrailingZeros(columnMasks8[getValFromString(move, 1)] & rowMasks8[0]);
-            } else {
-                start = Long.numberOfTrailingZeros(columnMasks8[getValFromString(move, 0)] & rowMasks8[6]);
-                end = Long.numberOfTrailingZeros(columnMasks8[getValFromString(move, 1)] & rowMasks8[7]);
-            }
-            if (promotionType == move.charAt(2)) {
-                board |= (1L << end);
-            } else {
-                board &= ~(1L << start);
-                board &= ~(1L << end);
-            }
-        } else if (move.charAt(3) == 'E') {// en passant
-            int start, end;
-            if (move.charAt(2) == 'W') {
-                start = Long.numberOfTrailingZeros(columnMasks8[getValFromString(move, 0)] & rowMasks8[3]);
-                end = Long.numberOfTrailingZeros(columnMasks8[getValFromString(move, 1)] & rowMasks8[2]);
-                board &= ~(columnMasks8[getValFromString(move, 1)] & rowMasks8[3]);
-            } else {
-                start = Long.numberOfTrailingZeros(columnMasks8[getValFromString(move, 0)] & rowMasks8[4]);
-                end = Long.numberOfTrailingZeros(columnMasks8[getValFromString(move, 1)] & rowMasks8[5]);
-                board &= ~(columnMasks8[getValFromString(move, 1)] & rowMasks8[4]);
-            }
-            if (((board >> start) & 1) == 1) {
-                board &= ~(1L << start);
-                board |= (1L << end);
+                board &= ~(1L << end); // remove from end (capture)
             }
         } else {
-            System.out.println("ERROR: Invalid move type: " + move);
+            if (promotionType == move.promotionPiece) { // promoted piece
+                board |= (1L << end); // add to end
+            } else {
+                board &= ~(1L << start); // remove from start
+                board &= ~(1L << end); // remove from end
+            }
+        }
+        if (move.type == EN_PASSANT) {
+            int enPassant = move.startRow * 8 + move.endCol;
+            board &= ~(1L << enPassant); // remove en passant pawn
         }
         return board;
     }
 
-    public long makeMoveCastle(long rookBoard, long kingBoard, String move, char type) {
-        if ((("CBQC".equals(move)) || ("CBKC".equals(move)) || ("CWKC".equals(move)) || ("CWQC".equals(move)))) {
-            if (type == 'R') {
-                switch (move) {
-                    case "CWQC":
-                        rookBoard &= ~(1L << CASTLE_ROOKS[1]);
-                        rookBoard |= (1L << (CASTLE_ROOKS[1] + 3));
-                        break;
-                    case "CWKC":
-                        rookBoard &= ~(1L << CASTLE_ROOKS[0]);
-                        rookBoard |= (1L << (CASTLE_ROOKS[0] - 2));
-                        break;
-                }
-            } else {
-                switch (move) {
-                    case "CBQC":
-                        rookBoard &= ~(1L << CASTLE_ROOKS[3]);
-                        rookBoard |= (1L << (CASTLE_ROOKS[3] + 3));
-                        break;
-                    case "CBKC":
-                        rookBoard &= ~(1L << CASTLE_ROOKS[2]);
-                        rookBoard |= (1L << (CASTLE_ROOKS[2] - 2));
-                        break;
-                }
+    public long makeMoveCastle(long rookBoard, Move move, char type) {
+        if (move.type == CASTLE) {
+            int start = move.startRow * 8 + move.rookStartCol;
+            int end = move.endRow * 8 + move.rookEndCol;
+            if (type == 'R' && move.startRow == 7 || type == 'r' && move.startRow == 0) {
+                rookBoard &= ~(1L << start); // remove from start
+                rookBoard |= (1L << end); // add to end
             }
         }
         return rookBoard;
     }
 
-    public long makeMoveEP(long board, String move) {
+    public long makeMoveEP(long board, Move move) {
         if (isDoublePush(move, board)) {
-            int row = (getValFromString(move, 0));
-            int col = (getValFromString(move, 1));
-            return (row == 1 ? rowMasks8[3] : rowMasks8[4]) & columnMasks8[col];
+            return (move.startRow == 1 ? rowMasks8[3] : rowMasks8[4]) & columnMasks8[move.startCol];
         } else
             return 0;
     }
 
-    public static boolean isDoublePush(String move, long board) {
-        if (Character.isDigit(move.charAt(3))) {
-            int start = (getValFromString(move, 0) * 8) + (getValFromString(move, 1));
-            if ((Math.abs(move.charAt(0) - move.charAt(2)) == 2) && (((board >> start) & 1) == 1)) {// pawn double push
-                return true;
-            }
-        }
-        return false;
+    public static boolean isDoublePush(Move move, long board) {
+        int start = move.startRow * 8 + move.startCol;
+        return (Math.abs(move.startRow - move.endRow) == 2) && (((board >> start) & 1) == 1);
     }
 
-    public String possibleMovesW(long[] pieces, boolean CWK, boolean CWQ) {
+    public List<Move> possibleMovesW(long[] pieces, boolean CWK, boolean CWQ) {
         myPieces = getMyPieces(true, pieces);
         notMyPieces = ~(myPieces);
         occupied = getOccupied(pieces);
         empty = ~occupied;
         long unSafe = unsafeForWhite(pieces);
-        return possibleWP(pieces[WP], pieces[BP], pieces[EP]) + possibleN(pieces[WN]) + possibleB(pieces[WB])
-                + possibleR(pieces[WR]) + possibleQ(pieces[WQ]) + possibleK(pieces[WK])
-                + possibleCW(CWK, CWQ, unSafe, pieces[WK], pieces[WR]);
+        List<Move> moves = new ArrayList<>();
+
+        possibleWP(moves, pieces[WP], pieces[BP], pieces[EP]);
+        possibleN(moves, pieces[WN]);
+        possibleB(moves, pieces[WB]);
+        possibleR(moves, pieces[WR]);
+        possibleQ(moves, pieces[WQ]);
+        possibleK(moves, pieces[WK]);
+        possibleCW(moves, CWK, CWQ, unSafe, pieces[WK], pieces[WR]);
+        return moves;
     }
 
-    public String possibleMovesB(long[] pieces, boolean CBK, boolean CBQ) {
+    public List<Move> possibleMovesB(long[] pieces, boolean CBK, boolean CBQ) {
         myPieces = getMyPieces(false, pieces);
         notMyPieces = ~(myPieces);
         occupied = getOccupied(pieces);
         empty = ~occupied;
         long unSafe = unsafeForBlack(pieces);
-        return possibleBP(pieces[BP], pieces[WP], pieces[EP]) + possibleN(pieces[BN]) + possibleB(pieces[BB])
-                + possibleR(pieces[BR]) + possibleQ(pieces[BQ]) + possibleK(pieces[BK])
-                + possibleCB(CBK, CBQ, unSafe, pieces[BK], pieces[BR]);
+        List<Move> moves = new ArrayList<>();
+
+        possibleBP(moves, pieces[BP], pieces[WP], pieces[EP]);
+        possibleN(moves, pieces[BN]);
+        possibleB(moves, pieces[BB]);
+        possibleR(moves, pieces[BR]);
+        possibleQ(moves, pieces[BQ]);
+        possibleK(moves, pieces[BK]);
+        possibleCB(moves, CBK, CBQ, unSafe, pieces[BK], pieces[BR]);
+        return moves;
     }
 
     public static long getMyPieces(boolean white, long[] pieces) {
@@ -594,31 +500,30 @@ public class Game {
                 pieces[BP] | pieces[BN] | pieces[BB] | pieces[BR] | pieces[BQ] | pieces[BK];
     }
 
-    public String possibleWP(long WP, long BP, long EP) {
-        StringBuilder list = new StringBuilder();
+    public void possibleWP(List<Move> moveList, long WP, long BP, long EP) {
 
         long pawnMoves = (WP >> 7) & notMyPieces & occupied & ~rowMasks8[0] & ~columnMasks8[0]; // capture right
-        addPawnMoves(list, pawnMoves, 1, -1);
+        addPawnMoves(moveList, pawnMoves, 1, -1);
 
         pawnMoves = (WP >> 9) & notMyPieces & occupied & ~rowMasks8[0] & ~columnMasks8[7]; // capture left
-        addPawnMoves(list, pawnMoves, 1, 1);
+        addPawnMoves(moveList, pawnMoves, 1, 1);
 
         pawnMoves = (WP >> 8) & empty & ~rowMasks8[0]; // move 1 up
-        addPawnMoves(list, pawnMoves, 1, 0);
+        addPawnMoves(moveList, pawnMoves, 1, 0);
 
         pawnMoves = (WP >> 16) & empty & (empty >> 8) & rowMasks8[4]; // move 2 up
-        addPawnMoves(list, pawnMoves, 2, 0);
+        addPawnMoves(moveList, pawnMoves, 2, 0);
 
         // promotion: y1, y2, promotion, 'P'
 
         pawnMoves = (WP >> 7) & notMyPieces & occupied & rowMasks8[0] & ~columnMasks8[0]; // capture right
-        addPromotion(list, pawnMoves, -1, true);
+        addPromotion(moveList, pawnMoves, 1, -1, true);
 
         pawnMoves = (WP >> 9) & notMyPieces & occupied & rowMasks8[0] & ~columnMasks8[7]; // capture left
-        addPromotion(list, pawnMoves, 1, true);
+        addPromotion(moveList, pawnMoves, 1, 1, true);
 
         pawnMoves = (WP >> 8) & notMyPieces & empty & rowMasks8[0]; // move 1 up
-        addPromotion(list, pawnMoves, 0, true);
+        addPromotion(moveList, pawnMoves, 1, 0, true);
 
         // el passant: y1, y2, Space, 'E'
 
@@ -626,97 +531,94 @@ public class Game {
         pawnMoves = (WP << 1) & BP & rowMasks8[3] & ~columnMasks8[0] & EP;
         if (pawnMoves != 0) {
             int i = Long.numberOfTrailingZeros(pawnMoves);
-            list.append(i % 8 - 1).append(i % 8).append("WE");
+            moveList.add(new Move(3, i % 8 - 1, 2, i % 8, EN_PASSANT));
         }
         // left
         pawnMoves = (WP >> 1) & BP & rowMasks8[3] & ~columnMasks8[7] & EP;
         if (pawnMoves != 0) {
             int i = Long.numberOfTrailingZeros(pawnMoves);
-            list.append(i % 8 + 1).append(i % 8).append("WE");
+            moveList.add(new Move(3, i % 8 + 1, 2, i % 8, EN_PASSANT));
         }
 
-        return list.toString();
     }
 
-    public String possibleBP(long BP, long WP, long EP) {
-        StringBuilder list = new StringBuilder();
+    public void possibleBP(List<Move> moveList, long BP, long WP, long EP) {
 
         long pawnMoves = (BP << 7) & notMyPieces & occupied & ~rowMasks8[7] & ~columnMasks8[7]; // capture right
-        addPawnMoves(list, pawnMoves, -1, 1);
+        addPawnMoves(moveList, pawnMoves, -1, 1);
 
         pawnMoves = (BP << 9) & notMyPieces & occupied & ~rowMasks8[7] & ~columnMasks8[0]; // capture left
-        addPawnMoves(list, pawnMoves, -1, -1);
+        addPawnMoves(moveList, pawnMoves, -1, -1);
 
         pawnMoves = (BP << 8) & empty & ~rowMasks8[7]; // move 1 up
-        addPawnMoves(list, pawnMoves, -1, 0);
+        addPawnMoves(moveList, pawnMoves, -1, 0);
 
         pawnMoves = (BP << 16) & empty & (empty << 8) & rowMasks8[3]; // move 2 up
-        addPawnMoves(list, pawnMoves, -2, 0);
+        addPawnMoves(moveList, pawnMoves, -2, 0);
 
-        // promotion: y1, y2, promotion, 'P'
+        // promotion
 
         pawnMoves = (BP << 7) & notMyPieces & occupied & rowMasks8[7] & ~columnMasks8[7]; // capture right
-        addPromotion(list, pawnMoves, 1, false);
+        addPromotion(moveList, pawnMoves, -1, 1, false);
 
         pawnMoves = (BP << 9) & notMyPieces & occupied & rowMasks8[7] & ~columnMasks8[0]; // capture left
-        addPromotion(list, pawnMoves, -1, false);
+        addPromotion(moveList, pawnMoves, -1, -1, false);
 
         pawnMoves = (BP << 8) & notMyPieces & empty & rowMasks8[7]; // move 1 up
-        addPromotion(list, pawnMoves, 0, false);
+        addPromotion(moveList, pawnMoves, -1, 0, false);
 
-        // el passant: y1, y2, Space, 'E'
+        // el passant
 
         // right
         pawnMoves = (BP >> 1) & WP & rowMasks8[4] & ~columnMasks8[7] & EP;
         if (pawnMoves != 0) {
             int i = Long.numberOfTrailingZeros(pawnMoves);
-            list.append(i % 8 + 1).append(i % 8).append("BE");
+            moveList.add(new Move(4, i % 8 + 1, 5, i % 8, EN_PASSANT));
         }
         // left
         pawnMoves = (BP << 1) & WP & rowMasks8[4] & ~columnMasks8[0] & EP;
         if (pawnMoves != 0) {
             int i = Long.numberOfTrailingZeros(pawnMoves);
-            list.append(i % 8 - 1).append(i % 8).append("BE");
+            moveList.add(new Move(4, i % 8 - 1, 5, i % 8, EN_PASSANT));
         }
 
-        return list.toString();
     }
 
-    private void addPromotion(StringBuilder list, long pawnMoves, int addCol, boolean white) {
+    private void addPromotion(List<Move> moveList, long pawnMoves, int addRow, int addCol, boolean white) {
         char[] promotion = white ? new char[]{'Q', 'R', 'B', 'N'} : new char[]{'q', 'r', 'b', 'n'};
         long firstPawn = pawnMoves & -pawnMoves; //&(pawnMoves-1)
         while (firstPawn != 0) {
             int i = Long.numberOfTrailingZeros(firstPawn);
-            int col = i % 8;
+            int row = i / 8, col = i % 8;
             for (char piece : promotion) {
-                list.append(col + addCol).append(col).append(piece).append('P');
+                moveList.add(new Move(row + addRow, col + addCol, row, col, PROMOTION, piece));
             }
             pawnMoves &= ~firstPawn;
             firstPawn = pawnMoves & -pawnMoves; //&(pawnMoves-1)
         }
     }
 
-    private void addPawnMoves(StringBuilder list, long pawnMoves, int addRow, int addCol) {
+    private void addPawnMoves(List<Move> moveList, long pawnMoves, int addRow, int addCol) {
         long pawn = pawnMoves & -pawnMoves; //&(pawnMoves-1)
         while (pawn != 0) {
             int i = Long.numberOfTrailingZeros(pawn);
             int row = i / 8, col = i % 8;
-            list.append(row + addRow).append(col + addCol).append(row).append(col);
+            moveList.add(new Move(row + addRow, col + addCol, row, col, NORMAL));
             pawnMoves &= ~pawn;
             pawn = pawnMoves & -pawnMoves; //&(pawnMoves-1)
         }
     }
 
-    private String possibleB(long BBoard) {
-        return getSlidingMoves(BBoard, this::diagonalMoves);
+    private void possibleB(List<Move> moveList, long BBoard) {
+        getSlidingMoves(moveList, BBoard, this::diagonalMoves);
     }
 
-    public String possibleR(long RBoard) {
-        return getSlidingMoves(RBoard, this::straightMoves);
+    public void possibleR(List<Move> moveList, long RBoard) {
+        getSlidingMoves(moveList, RBoard, this::straightMoves);
     }
 
-    public String possibleQ(long QBoard) {
-        return getSlidingMoves(QBoard, this::getQueenMoves);
+    public void possibleQ(List<Move> moveList, long QBoard) {
+        getSlidingMoves(moveList, QBoard, this::getQueenMoves);
     }
 
     private long getQueenMoves(int position) {
@@ -727,88 +629,77 @@ public class Game {
         long getMoves(int location);
     }
 
-    public String possibleK(long KBoard) {
-        StringBuilder list = new StringBuilder();
+    public void possibleK(List<Move> moveList, long KBoard) {
         int location = Long.numberOfTrailingZeros(KBoard);
         long moves = location > 9 ?
                 KING_SPAN << (location - 9) :
                 KING_SPAN >> (9 - location);
-        checkArrayOut(list, location, moves);
-        return list.toString();
+        checkArrayOut(moveList, location, moves);
     }
 
-    public String possibleN(long KBoard) {
-        StringBuilder list = new StringBuilder();
+    public void possibleN(List<Move> moveList, long KBoard) {
         long knight = KBoard & -KBoard;
         while (knight != 0) {
             int location = Long.numberOfTrailingZeros(knight);
             long moves = location > 18 ?
                     KNIGHT_SPAN << (location - 18) :
                     KNIGHT_SPAN >> (18 - location);
-            checkArrayOut(list, location, moves);
+            checkArrayOut(moveList, location, moves);
             KBoard &= ~knight;
             knight = KBoard & -KBoard;
         }
-        return list.toString();
     }
 
-    private String getSlidingMoves(long board, GetMoves getMoves) {
-        StringBuilder list = new StringBuilder();
+    private void getSlidingMoves(List<Move> moveList, long board, GetMoves getMoves) {
         long piece = board & -board;
         while (piece != 0) {
             int location = Long.numberOfTrailingZeros(piece);
             long moves = getMoves.getMoves(location) & notMyPieces;
-            addMove(list, location, moves);
+            addMove(moveList, location, moves);
             board &= ~piece;
             piece = board & -board;
         }
-        return list.toString();
     }
 
-    private void addMove(StringBuilder list, int location, long moves) {
+    private void addMove(List<Move> moveList, int location, long moves) {
         long move = moves & -moves;
         while (move != 0) {
             int nextLocation = Long.numberOfTrailingZeros(move);
-            list.append(location / 8).append(location % 8).append(nextLocation / 8)
-                    .append(nextLocation % 8);
+            moveList.add(new Move(location / 8, location % 8, nextLocation / 8, nextLocation % 8, NORMAL));
             moves &= ~move;
             move = moves & -moves;
         }
     }
 
-    private void checkArrayOut(StringBuilder list, int location, long moves) {
+    private void checkArrayOut(List<Move> moveList, int location, long moves) {
         moves = location % 8 < 4 ?
                 moves & ~columnGH & notMyPieces :
                 moves & ~columnAB & notMyPieces;
-        addMove(list, location, moves);
+        addMove(moveList, location, moves);
     }
 
-    public String possibleCW(boolean castleWK, boolean castleWQ, long unsafe, long king, long rook) {
-        StringBuilder list = new StringBuilder();
+    public void possibleCW(List<Move> moves, boolean castleWK, boolean castleWQ, long unsafe, long king, long rook) {
         // must empty places
-        if ((unsafe & king) == 0) {
+        if ((unsafe & king) == 0) { // not in check
             if (castleWK && (((1L << CASTLE_ROOKS[0]) & rook) != 0) && ((occupied | unsafe) & ((1L << 61) | (1L << 62))) == 0) {
-                list.append("CWKC");
+                moves.add(new Move(7, 4, 7, 6, CASTLE, 7, 5));
             }
             if (castleWQ && (((1L << CASTLE_ROOKS[1]) & rook) != 0) && ((occupied | (unsafe & ~(1L << 57))) & ((1L << 57) | (1L << 58) | (1L << 59))) == 0) {
-                list.append("CWQC");
+                moves.add(new Move(7, 4, 7, 2, CASTLE, 0, 3));
             }
         }
-        return list.toString();
     }
 
-    public String possibleCB(boolean castleBK, boolean castleBQ, long unsafe, long king, long rook) {
-        StringBuilder list = new StringBuilder();
+    public void possibleCB(List<Move> moves, boolean castleBK, boolean castleBQ, long unsafe, long king, long rook) {
         // must empty places
-        if ((unsafe & king) == 0) {
+        if ((unsafe & king) == 0) { // not in check
             if (castleBK && (((1L << CASTLE_ROOKS[2]) & rook) != 0) && ((occupied | unsafe) & ((1L << 5) | (1L << 6))) == 0) {
-                list.append("CBKC");
+                moves.add(new Move(0, 4, 0, 6, CASTLE, 7, 5));
             }
             if (castleBQ && (((1L << CASTLE_ROOKS[3]) & rook) != 0) && ((occupied | (unsafe & ~(1L << 1))) & ((1L << 1) | (1L << 2) | (1L << 3))) == 0) {
-                list.append("CBQC");
+                moves.add(new Move(0, 4, 0, 2, CASTLE, 0, 3));
             }
         }
-        return list.toString();
     }
 
     public long unsafeForBlack(long[] pieces) {

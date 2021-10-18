@@ -1,12 +1,10 @@
 package com.example.chessapp.game.logic.engine;
 
-import android.util.Log;
-
+import com.example.chessapp.game.Move;
 import com.example.chessapp.game.logic.Game;
 
-import java.util.HashMap;
-
-import static com.example.chessapp.game.logic.BitBoards.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Engine {
     private final Game game;
@@ -14,7 +12,7 @@ public class Engine {
     private final static int mateScore = 49000;
     private final static int infinity = 50000;
     private final Rating rating;
-    public String bestMove;
+    public Move bestMove;
     public int mate = -1;
 
     public Engine(Game game) {
@@ -23,18 +21,17 @@ public class Engine {
     }
 
     public int scoreMove(long[] boards, boolean[] castleFlags, boolean white) {
-        bestMove = "";
+        bestMove = null;
         return alphaBeta(-infinity, infinity, globalDepth - 1, boards, castleFlags, white);
     }
 
     public int findBestMove(long[] boards, boolean[] castleFlags, boolean white) {
-        bestMove = "";
+        bestMove = null;
         mate = -1;
         nodes = 0;
         test = 0;
         depth0 = 0;
         int score = 0;
-        bestMove = "";
         score = alphaBeta(-infinity, infinity, globalDepth, boards, castleFlags, white);
         if (Math.abs(score) >= mateScore - globalDepth) {
             mate = (mateScore - Math.abs(score)) / 2;
@@ -61,14 +58,13 @@ public class Engine {
         }
 
         int ply = globalDepth - depth;
-        String moves = game.possibleMoves(white, boards, castleFlags);
+        List<Move> moves = game.possibleMoves(white, boards, castleFlags);
         moves = sortMoves(moves, boards, white, ply);
         int legalMoves = 0;
-        String bestMove = "";
+        Move bestMove = null;
         int oldAlpha = alpha;
 
-        for (int i = 0; i < moves.length(); i += 4) {
-            String move = moves.substring(i, i + 4);
+        for (Move move : moves) {
             long[] nextBoards = game.makeMove(move, boards);
 
             legalMoves++;
@@ -104,28 +100,28 @@ public class Engine {
         return alpha;
     }
 
-    public String sortMoves(String moves, long[] boards, boolean white, int ply) {
-        int[] moveScores = new int[moves.length() / 4];
+    public List<Move> sortMoves(List<Move> moves, long[] boards, boolean white, int ply) {
+        int[] moveScores = new int[moves.size()];
 
-        for (int i = 0; i < moves.length(); i += 4) {
-            String move = moves.substring(i, i + 4);
-            moveScores[i / 4] = rating.scoreMove(move, boards, white, ply);
+        for (int i = 0; i < moves.size(); i++) {
+            Move move = moves.get(i);
+            moveScores[i] = rating.scoreMove(move, boards, white, ply);
         }
 
-        StringBuilder sortedMoves = new StringBuilder();
-        for (int i = 0; i < moves.length() / 4; i++) {
+        List<Move> sortedMoves = new ArrayList<>();
+        for (int i = 0; i < moves.size(); i++) {
             int maxScore = Integer.MIN_VALUE;
             int maxIndex = 0;
-            for (int j = 0; j < moves.length() / 4; j++) {
+            for (int j = 0; j < moves.size(); j++) {
                 if (maxScore < moveScores[j]) {
                     maxScore = moveScores[j];
                     maxIndex = j;
                 }
             }
             moveScores[maxIndex] = Integer.MIN_VALUE;
-            sortedMoves.append(moves.substring(maxIndex * 4, maxIndex * 4 + 4));
+            sortedMoves.add(moves.get(i));
         }
-        return sortedMoves.toString();
+        return sortedMoves;
     }
 
     int costam = 0;

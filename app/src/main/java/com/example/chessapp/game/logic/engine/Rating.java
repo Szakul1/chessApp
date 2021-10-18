@@ -1,22 +1,24 @@
 package com.example.chessapp.game.logic.engine;
 
-import static com.example.chessapp.game.logic.BitBoards.*;
+import static com.example.chessapp.game.MoveType.EN_PASSANT;
+import static com.example.chessapp.game.logic.BitBoards.BP;
+import static com.example.chessapp.game.logic.BitBoards.WP;
 
+import com.example.chessapp.game.Move;
 import com.example.chessapp.game.logic.Game;
-import com.example.chessapp.game.logic.Move;
 
 public class Rating {
 
-    public int scoreMove(String move, long[] boards, boolean white, int ply) {
+    public int scoreMove(Move move, long[] boards, boolean white, int ply) {
         long opponentPieces = Game.getMyPieces(!white, boards);
-        if (move.charAt(3) == 'E')
+        if (move.type == EN_PASSANT)
             return mvv_lva[WP][BP];
         int startPieces = 0;
         int targetPiece = 0;
         if (captureMove(move, opponentPieces)) {
             for (int i = 0; i < boards.length - 1; i++) {
-                int start = Game.getValFromString(move, 0) * 8 + Game.getValFromString(move, 1);
-                int target = Game.getValFromString(move, 2) * 8 + Game.getValFromString(move, 3);
+                int start = move.startRow * 8 + move.startCol;
+                int target = move.endRow * 8 + move.endCol;
                 if ((boards[i] & (1L << start)) != 0) {
                     startPieces = i;
                 } else if ((boards[i] & (1L << target)) != 0) {
@@ -75,14 +77,11 @@ public class Rating {
         return (7 - position / 8) * 8 + position % 8;
     }
 
-    public boolean captureMove(String m, long opponentPieces) {
-        Move move = Move.parseMove(m);
-        if (move.castle)
-            return false;
-        if (move.enPassant) {
+    public boolean captureMove(Move move, long opponentPieces) {
+        if (move.type== EN_PASSANT) {
             return true;
         }
-        int position = move.targetRow * 8 + move.targetCol;
+        int position = move.endRow * 8 + move.endCol;
         // not capture
         return ((1L << position) & opponentPieces) != 0;
     }

@@ -2,10 +2,16 @@ package com.example.chessapp.game.logic.game;
 
 import static org.junit.Assert.assertEquals;
 
+import com.example.chessapp.game.Move;
 import com.example.chessapp.game.logic.Game;
 
 import org.junit.Test;
 
+import java.util.List;
+
+/**
+ * Perft testing with results based on: https://www.chessprogramming.org/Perft_Results
+ */
 public class PerftTest {
 
     private int perfCounter;
@@ -72,7 +78,7 @@ public class PerftTest {
         game.setBoards(boards);
 
         // when
-        perft(5, game.getBoards(), game.getCastleFlags(), true);
+        perft(4, game.getBoards(), game.getCastleFlags(), true);
 
         // then
         assertEquals(4_085_603, perfCounter);
@@ -80,27 +86,17 @@ public class PerftTest {
 
     private void perft(int depth, long[] boards, boolean[] castleFlags, boolean white) {
         if (depth > 0) {
-            String moves = game.possibleMoves(white, boards, castleFlags);
-            for (int i = 0; i < moves.length(); i += 4) {
-                String move = moves.substring(i, i + 4);
-
+            List<Move> moves = game.possibleMoves(white, boards, castleFlags);
+            for (Move move : moves) {
                 long[] nextBoards = game.makeMove(move, boards);
                 boolean[] nextFlags = game.updateCastling(move, boards, castleFlags);
 
-                if (depth == 1)
+                if (depth == 1) {
                     perfCounter++;
+                }
                 perft(depth - 1, nextBoards, nextFlags, !white);
             }
         }
-    }
-
-    public String moveToAlgebra(String move) {
-        String moveString = "";
-        moveString += "" + (char) (move.charAt(1) + 49);
-        moveString += "" + ('8' - move.charAt(0));
-        moveString += "" + (char) (move.charAt(3) + 49);
-        moveString += "" + ('8' - move.charAt(2));
-        return moveString;
     }
 
     private long[] arrayToBitboards() {

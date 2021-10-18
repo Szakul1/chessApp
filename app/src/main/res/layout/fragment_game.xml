@@ -80,20 +80,18 @@
                     android:layout_margin="5sp"
                     android:background="@color/white"
                     android:padding="5sp"
-                    android:text="+1.00"
                     android:textColor="@color/black"
                     android:textSize="20sp"
-                    android:visibility="invisible" />
+                    />
 
                 <TextView
                     android:id="@+id/best_move"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_margin="5sp"
-                    android:text="a5h4"
                     android:textColor="@color/black"
                     android:textSize="20sp"
-                    android:visibility="invisible" />
+                    />
 
             </LinearLayout>
 
@@ -117,20 +115,17 @@
                     android:layout_margin="5sp"
                     android:background="@color/white"
                     android:padding="5sp"
-                    android:text="+1.00"
                     android:textColor="@color/black"
-                    android:textSize="20sp"
-                    android:visibility="invisible" />
+                    android:textSize="20sp" />
 
                 <TextView
                     android:id="@+id/actual_move"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_margin="5sp"
-                    android:text="a5h4"
                     android:textColor="@color/black"
                     android:textSize="20sp"
-                    android:visibility="invisible" />
+                     />
 
             </LinearLayout>
 
