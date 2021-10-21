@@ -40,7 +40,11 @@ import java.util.concurrent.TimeUnit;
 
 @SuppressLint("ViewConstructor")
 public class Board extends SurfaceView implements SurfaceHolder.Callback {
+    // constants
     private final static int boardSize = 8;
+    private static final int WHITE_BOARD_COLOR = Color.rgb(238, 238, 210);
+    private static final int GREEN_BOARD_COLOR = Color.rgb(118, 150, 86);
+
     private Game game;
     private final Context context;
 
@@ -170,10 +174,10 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     public void draw(Canvas canvas) {
         super.draw(canvas);
 
-        if (!color) {
-            canvas.rotate(180, canvas.getWidth() / 2, canvas.getHeight() / 2);
-        }
         drawBoard(canvas);
+        if (!color) {
+            canvas.rotate(180, (float) getWidth() / 2, (float) getHeight() / 2);
+        }
         drawPieces(canvas);
         drawMoves(canvas);
     }
@@ -281,18 +285,28 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
 
     private void drawBoard(Canvas canvas) {
         Paint p = new Paint();
+        p.setTextSize(pieceWidth / 3);
+        p.setAntiAlias(true);
+        Rect bounds = new Rect();
 
         boolean color = false;
         for (int i = 0; i < boardSize; i++) {
             for (int j = 0; j < boardSize; j++) {
                 color = !color;
-                if (color)
-                    p.setColor(Color.rgb(238, 238, 210));
-                else
-                    p.setColor(Color.rgb(118, 150, 86));
+                p.setColor(getPaintColor(color));
                 canvas.drawRect(j * pieceWidth, i * pieceWidth, (j + 1) * pieceWidth,
                         (i + 1) * pieceHeight, p);
+                p.setColor(getPaintColor(!color));
+                if (i == boardSize - 1) {
+                    String text = "" + (char) (this.color ? 'a' + j : 'h' - j);
+                    p.getTextBounds(text, 0, 1, bounds);
+                    canvas.drawText(text, (j + 1) * pieceWidth - (bounds.width() + 3), getHeight() - bounds.bottom - 3, p);
+                }
             }
+            p.setColor(getPaintColor(color));
+            String text = "" + (this.color ? 8 - i : i + 1);
+            p.getTextBounds(text, 0, 1, bounds);
+            canvas.drawText(text, 3, i * pieceWidth + bounds.height() + 3, p);
             color = !color;
         }
         if (selection) {
@@ -301,6 +315,13 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
                     (selectedX + 1) * pieceWidth,
                     (selectedY + 1) * pieceHeight, p);
         }
+    }
+
+    private int getPaintColor(boolean color) {
+        if (!color)
+            return WHITE_BOARD_COLOR;
+        else
+            return GREEN_BOARD_COLOR;
     }
 
     private void animation(int row, int col) {
@@ -508,7 +529,11 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             analyze = game.startAnalyze(true, endDialog.findViewById(R.id.loading_bar));
             repaint();
             forwardButton.setOnClickListener(view -> {
-                updateAnalyze(analyze, analyze.moveForward());
+                int currentMove = analyze.moveForward();
+                if (currentMove == 0) {
+                    showAnalyze();
+                }
+                updateAnalyze(analyze, currentMove);
             });
             backButton.setOnClickListener(view -> {
                 int currentMove = analyze.moveBack();
@@ -556,6 +581,13 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         bestMove.setVisibility(INVISIBLE);
         actualScore.setVisibility(INVISIBLE);
         actualMove.setVisibility(INVISIBLE);
+    }
+
+    private void showAnalyze() {
+        bestScore.setVisibility(VISIBLE);
+        bestMove.setVisibility(VISIBLE);
+        actualScore.setVisibility(VISIBLE);
+        actualMove.setVisibility(VISIBLE);
     }
 
     private void setBias(float bias) {

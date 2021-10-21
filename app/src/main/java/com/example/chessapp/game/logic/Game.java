@@ -270,7 +270,7 @@ public class Game {
      */
 
     public char updateBoard(Move move) {
-        char piece = chessBoard[move.endRow][move.endRow];
+        char piece = chessBoard[move.endRow][move.endCol];
         if (move.type == PROMOTION) {
             chessBoard[move.endRow][move.endCol] = move.promotionPiece;
         } else {

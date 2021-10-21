@@ -1,5 +1,8 @@
 package com.example.chessapp.game;
 
+import static com.example.chessapp.game.MoveType.CASTLE;
+import static com.example.chessapp.game.MoveType.PROMOTION;
+
 import androidx.annotation.NonNull;
 
 public class Move {
@@ -48,11 +51,18 @@ public class Move {
     @Override
     public String toString() {
         String moveString = "";
-        moveString += (char) ('a' + startCol);
-        moveString += 8 - startRow;
-        moveString += " ➝ ";
-        moveString += (char) ('a' + endCol);
-        moveString += 8 - endRow;
+        if (type == CASTLE) {
+            moveString = rookEndCol == 0 ? "0-0-0" : "0-0";
+        } else {
+            moveString += (char) ('a' + startCol);
+            moveString += 8 - startRow;
+            moveString += capturePiece == ' ' ? " ➝ " : " × ";
+            moveString += (char) ('a' + endCol);
+            moveString += 8 - endRow;
+        }
+        if (type == PROMOTION) {
+            moveString += promotionPiece;
+        }
         return moveString;
     }
 }

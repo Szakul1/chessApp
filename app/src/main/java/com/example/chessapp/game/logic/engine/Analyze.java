@@ -62,8 +62,8 @@ public class Analyze {
     public int moveBack() {
         if (currentMove == -1)
             return currentMove;
-        currentMove--;
         game.undoMove(moves.get(currentMove));
+        currentMove--;
         return currentMove;
     }
 
