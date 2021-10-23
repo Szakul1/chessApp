@@ -1,4 +1,4 @@
-package com.example.chessapp.game;
+package com.example.chessapp.game.type;
 
 public enum MoveType {
     NORMAL,

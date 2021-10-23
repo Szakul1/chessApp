@@ -1,7 +1,7 @@
-package com.example.chessapp.game;
+package com.example.chessapp.game.type;
 
-import static com.example.chessapp.game.MoveType.CASTLE;
-import static com.example.chessapp.game.MoveType.PROMOTION;
+import static com.example.chessapp.game.type.MoveType.CASTLE;
+import static com.example.chessapp.game.type.MoveType.PROMOTION;
 
 import androidx.annotation.NonNull;
 

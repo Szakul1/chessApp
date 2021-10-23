@@ -1,16 +1,16 @@
 package com.example.chessapp.game.logic.engine;
 
-import static com.example.chessapp.game.MoveType.EN_PASSANT;
-import static com.example.chessapp.game.logic.BitBoards.BP;
-import static com.example.chessapp.game.logic.BitBoards.WP;
+import static com.example.chessapp.game.type.BitBoards.BP;
+import static com.example.chessapp.game.type.BitBoards.WP;
+import static com.example.chessapp.game.type.MoveType.EN_PASSANT;
 
-import com.example.chessapp.game.Move;
-import com.example.chessapp.game.logic.Game;
+import com.example.chessapp.game.logic.MoveGenerator;
+import com.example.chessapp.game.type.Move;
 
 public class Rating {
 
     public int scoreMove(Move move, long[] boards, boolean white, int ply) {
-        long opponentPieces = Game.getMyPieces(!white, boards);
+        long opponentPieces = MoveGenerator.getMyPieces(!white, boards);
         if (move.type == EN_PASSANT)
             return mvv_lva[WP][BP];
         int startPieces = 0;

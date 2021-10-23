@@ -3,7 +3,8 @@ package com.example.chessapp.game.logic.engine;
 import android.util.Log;
 import android.widget.ProgressBar;
 
-import com.example.chessapp.game.Move;
+import com.example.chessapp.game.logic.MoveGenerator;
+import com.example.chessapp.game.type.Move;
 import com.example.chessapp.game.logic.Game;
 
 import java.util.Arrays;
@@ -38,8 +39,8 @@ public class Analyze {
             score = white ? score : -score;
             bestMoves[i] = engine.bestMove.toString();
             bestScores[i] = score;
-            castleFlags = game.updateCastling(move, boards, castleFlags);
-            boards = game.makeMove(move, boards);
+            castleFlags = MoveGenerator.updateCastling(move, boards, castleFlags);
+            boards = MoveGenerator.makeMove(move, boards);
 
             white = !white;
             score = engine.scoreMove(boards, castleFlags, white);

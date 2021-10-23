@@ -1,4 +1,4 @@
-package com.example.chessapp.gui;
+package com.example.chessapp.menu;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;

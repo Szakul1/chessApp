@@ -1,8 +1,5 @@
 package com.example.chessapp;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.viewpager2.widget.ViewPager2;
-
 import android.app.Dialog;
 import android.os.Bundle;
 import android.view.View;
@@ -11,7 +8,10 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import com.example.chessapp.gui.ScreenSlidePagerAdapter;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.viewpager2.widget.ViewPager2;
+
+import com.example.chessapp.menu.ScreenSlidePagerAdapter;
 
 import java.util.Objects;
 

@@ -1,11 +1,9 @@
-package com.example.chessapp.gui;
+package com.example.chessapp.menu;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
-
-import static androidx.viewpager.widget.PagerAdapter.POSITION_NONE;
 
 public class ScreenSlidePagerAdapter extends FragmentStateAdapter {
 

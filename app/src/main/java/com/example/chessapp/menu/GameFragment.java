@@ -1,4 +1,4 @@
-package com.example.chessapp.gui;
+package com.example.chessapp.menu;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -11,7 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.example.chessapp.R;
-import com.example.chessapp.game.frontend.Board;
+import com.example.chessapp.game.gui.Board;
 
 public class GameFragment extends Fragment {
 

@@ -1,13 +1,12 @@
 package com.example.chessapp.game.logic.engine;
 
-import com.example.chessapp.game.Move;
-import com.example.chessapp.game.logic.Game;
+import com.example.chessapp.game.logic.MoveGenerator;
+import com.example.chessapp.game.type.Move;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class Engine {
-    private final Game game;
     public static int globalDepth = 4;
     private final static int mateScore = 49000;
     private final static int infinity = 50000;
@@ -15,8 +14,7 @@ public class Engine {
     public Move bestMove;
     public int mate = -1;
 
-    public Engine(Game game) {
-        this.game = game;
+    public Engine() {
         rating = new Rating();
     }
 
@@ -51,24 +49,22 @@ public class Engine {
         nodes++;
         if (depth == 0) {
             depth0++;
-            costam = 0;
-            score = quiescence(alpha, beta, boards, castleFlags, white);
-            nodes += costam;
+            score = rating.evaluate(boards, white);
             return score;
         }
 
         int ply = globalDepth - depth;
-        List<Move> moves = game.possibleMoves(white, boards, castleFlags);
+        List<Move> moves = MoveGenerator.possibleMoves(white, boards, castleFlags);
         moves = sortMoves(moves, boards, white, ply);
         int legalMoves = 0;
         Move bestMove = null;
         int oldAlpha = alpha;
 
         for (Move move : moves) {
-            long[] nextBoards = game.makeMove(move, boards);
+            long[] nextBoards = MoveGenerator.makeMove(move, boards);
 
             legalMoves++;
-            boolean[] nextFlags = game.updateCastling(move, boards, castleFlags);
+            boolean[] nextFlags = MoveGenerator.updateCastling(move, boards, castleFlags);
             score = -alphaBeta(-beta, -alpha, depth - 1, nextBoards, nextFlags, !white);
 
             if (score > alpha) {
@@ -86,7 +82,7 @@ public class Engine {
         }
 
         if (legalMoves == 0) {
-            if (!game.kingSafe(white, boards)) {
+            if (!MoveGenerator.kingSafe(white, boards)) {
                 return -mateScore + ply;
             } else {
                 return 0;
@@ -124,53 +120,4 @@ public class Engine {
         return sortedMoves;
     }
 
-    int costam = 0;
-
-    public int quiescence(int alpha, int beta, long[] boards, boolean[] castleFlags, boolean white) {
-//        costam++;
-        int score = rating.evaluate(boards, white);
-        return score;
-
-//        if (score > alpha) {
-//            if (score >= beta) {
-//                return beta;
-//            }
-//            alpha = score;
-//        }
-//
-//        String moves = game.possibleMoves(white, boards, castleFlags);
-//        moves = sortMoves(moves, boards, white);
-//
-//        // only captures
-//        long opponentPieces = Game.getMyPieces(!white, boards);
-//        for (int i = 0; i < moves.length(); i += 4) {
-//            String move = moves.substring(i, i + 4);
-//
-//            // TODO
-//            if (move.charAt(3) != 'E') {
-//                if (!Character.isDigit(move.charAt(3)))
-//                    continue;
-//                int position = Game.getValFromString(move, 2) * 8 + Game.getValFromString(move, 3);
-//                if (((1L << position) & opponentPieces) == 0) { // not capture
-//                    continue;
-//                }
-//            }
-//
-//            long[] nextBoards = game.makeMove(move, boards);
-//            if (!game.kingSafe(white, nextBoards)) {
-//                continue;
-//            }
-//
-//            score = -quiescence(-beta, -alpha, nextBoards, castleFlags, !white);
-//
-//            if (score > alpha) {
-//                if (score >= beta) {
-//                    return beta;
-//                }
-//                alpha = score;
-//            }
-//        }
-//
-//        return alpha;
-    }
 }

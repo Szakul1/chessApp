@@ -1,4 +1,4 @@
-package com.example.chessapp.game.frontend;
+package com.example.chessapp.game.gui;
 
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
@@ -28,15 +28,12 @@ import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.chessapp.MainActivity;
 import com.example.chessapp.R;
-import com.example.chessapp.game.Move;
+import com.example.chessapp.game.type.Move;
 import com.example.chessapp.game.logic.Game;
 import com.example.chessapp.game.logic.engine.Analyze;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 @SuppressLint("ViewConstructor")
 public class Board extends SurfaceView implements SurfaceHolder.Callback {
@@ -56,11 +53,9 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
 
     // flags
     private final boolean twoPlayers;
-    private boolean color;
+    private final boolean color;
     private Integer selectedX, selectedY;
     private boolean selection;
-    private boolean animation;
-    private float animationX, animationY;
     private boolean analyzing;
     private Move promotionMove;
     private boolean whiteTurn;
@@ -217,12 +212,8 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 boolean draw = true;
-                if (animation && selectedX == j && selectedY == i) {
-                    dst = new Rect((int) animationX, (int) animationY,
-                            (int) (animationX + pieceWidth), (int) (animationY + pieceHeight));
-                } else
-                    dst = new Rect((int) pieceWidth * j, (int) pieceHeight * i,
-                            (j + 1) * (int) pieceWidth, (i + 1) * (int) pieceHeight);
+                dst = new Rect((int) pieceWidth * j, (int) pieceHeight * i,
+                        (j + 1) * (int) pieceWidth, (i + 1) * (int) pieceHeight);
                 switch (game.chessBoard[i][j]) {
                     case 'K':
                         if (!game.kingSafe(true)) {
@@ -324,39 +315,10 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
             return GREEN_BOARD_COLOR;
     }
 
-    private void animation(int row, int col) {
-        animation = true;
-        selectedY = row;
-        selectedX = col;
-        float numberOfFrames = 10;
-        float speedX = (col * pieceWidth - animationX) / numberOfFrames;
-        float speedY = (row * pieceHeight - animationY) / numberOfFrames;
-        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-        executor.scheduleAtFixedRate(new Runnable() {
-            int counter = 0;
-
-            @Override
-            public void run() {
-                if (counter == numberOfFrames) {
-                    animation = false;
-                    repaint();
-                    executor.shutdown();
-                    return;
-                }
-
-                animationX += speedX;
-                animationY += speedY;
-
-                repaint();
-                counter++;
-            }
-        }, 0, (long) (50 / numberOfFrames), TimeUnit.MILLISECONDS);
-    }
-
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (analyzing || animation) {
+        if (analyzing) {
             return false;
         }
         if (finishedGame != null) {
@@ -411,13 +373,9 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         game.gameFinished(whiteTurn);
 
         selection = false;
-//        animationX = selectedX * pieceWidth;
-//        animationY = selectedY * pieceHeight;
-
-        //            animation(newY, newX);
     }
 
-    public void showDialog(Move promotionMove) {
+    public void showPromotionDialog(Move promotionMove) {
         this.promotionMove = promotionMove;
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 

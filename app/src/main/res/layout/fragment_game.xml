@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="10sp"
-    tools:context=".gui.GameFragment">
+    tools:context=".menu.GameFragment">
 
     <LinearLayout
         android:id="@+id/board"

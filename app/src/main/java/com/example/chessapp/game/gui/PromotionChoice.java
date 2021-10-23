@@ -1,4 +1,4 @@
-package com.example.chessapp.game.frontend;
+package com.example.chessapp.game.gui;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -12,7 +12,6 @@ import android.view.MotionEvent;
 import android.view.View;
 
 import com.example.chessapp.R;
-import com.example.chessapp.game.frontend.Board;
 
 @SuppressLint("ViewConstructor")
 public class PromotionChoice extends View {
