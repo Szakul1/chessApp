@@ -16,7 +16,7 @@ import com.example.chessapp.game.gui.Board;
 public class GameFragment extends Fragment {
 
     private final boolean twoPlayers;
-    private boolean color;
+    private final boolean color;
 
     public GameFragment(boolean twoPlayers, boolean color) {
         this.twoPlayers = twoPlayers;

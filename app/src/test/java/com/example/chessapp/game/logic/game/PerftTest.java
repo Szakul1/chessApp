@@ -1,10 +1,21 @@
 package com.example.chessapp.game.logic.game;
 
+import static com.example.chessapp.game.type.BitBoards.BB;
+import static com.example.chessapp.game.type.BitBoards.BK;
+import static com.example.chessapp.game.type.BitBoards.BN;
+import static com.example.chessapp.game.type.BitBoards.BP;
+import static com.example.chessapp.game.type.BitBoards.BQ;
+import static com.example.chessapp.game.type.BitBoards.BR;
+import static com.example.chessapp.game.type.BitBoards.WB;
+import static com.example.chessapp.game.type.BitBoards.WK;
+import static com.example.chessapp.game.type.BitBoards.WN;
+import static com.example.chessapp.game.type.BitBoards.WP;
+import static com.example.chessapp.game.type.BitBoards.WQ;
+import static com.example.chessapp.game.type.BitBoards.WR;
 import static org.junit.Assert.assertEquals;
 
 import com.example.chessapp.game.logic.MoveGenerator;
 import com.example.chessapp.game.type.Move;
-import com.example.chessapp.game.logic.Game;
 
 import org.junit.Test;
 
@@ -110,12 +121,43 @@ public class PerftTest {
         long[] boards = new long[]{0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,};
         long binary = 1L;
         for (int i = 0; i < 64; i++) {
-            int board = Game.getBoardFromChar(chessboard[i / 8][i % 8]);
+            int board = getBoardFromChar(chessboard[i / 8][i % 8]);
             if (board != -1) {
                 boards[board] += binary;
             }
             binary = binary << 1;
         }
         return boards;
+    }
+
+    private static int getBoardFromChar(char piece) {
+        switch (piece) {
+            case 'P':
+                return WP;
+            case 'N':
+                return WN;
+            case 'B':
+                return WB;
+            case 'R':
+                return WR;
+            case 'Q':
+                return WQ;
+            case 'K':
+                return WK;
+            case 'p':
+                return BP;
+            case 'n':
+                return BN;
+            case 'b':
+                return BB;
+            case 'r':
+                return BR;
+            case 'q':
+                return BQ;
+            case 'k':
+                return BK;
+        }
+        // empty
+        return -1;
     }
 }

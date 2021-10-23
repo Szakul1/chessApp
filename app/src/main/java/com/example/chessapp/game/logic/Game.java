@@ -16,7 +16,6 @@ import static com.example.chessapp.game.type.MoveType.CASTLE;
 import static com.example.chessapp.game.type.MoveType.EN_PASSANT;
 import static com.example.chessapp.game.type.MoveType.PROMOTION;
 
-import android.util.Log;
 import android.widget.ProgressBar;
 
 import com.example.chessapp.game.gui.Board;
@@ -33,7 +32,7 @@ public class Game {
     private final Board board;
     private final Engine engine;
     // r - rook, k - knight, b - bishop, q - queen, a - king p - pawn
-    // capital for white lower for black
+    // upper for white lower for black
     private final char[][] startingBoard = {
             {'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'},
             {'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'},
@@ -44,94 +43,15 @@ public class Game {
             {'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'},
             {'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'}};
     public char[][] chessBoard;
-    //    public char[][] chessBoard = {
-//            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
-//            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
-//            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
-//            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
-//            {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
-//            {' ', ' ', ' ', 'k', ' ', ' ', ' ', ' '},
-//            {' ', ' ', 'q', ' ', ' ', ' ', ' ', ' '},
-//            {' ', ' ', ' ', ' ', ' ', 'K', ' ', ' '}};
     private long[] boards = {0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,};
     private boolean[] castleFlags = {true, true, true, true};
-
-
     public List<Move> moveHistory = new ArrayList<>();
-
-    /*
-        Initializing board
-     */
-
-    public void arrayToBitboards() {
-        boards = new long[]{0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,};
-        castleFlags = new boolean[]{true, true, true, true};
-        resetBoard();
-        long binary = 1L;
-        for (int i = 0; i < 64; i++) {
-            int board = getBoardFromChar(chessBoard[i / 8][i % 8]);
-            if (board != -1) {
-                boards[board] += binary;
-            }
-            binary = binary << 1;
-        }
-    }
-
-    public static int getBoardFromChar(char piece) {
-        switch (piece) {
-            case 'P':
-                return WP;
-            case 'N':
-                return WN;
-            case 'B':
-                return WB;
-            case 'R':
-                return WR;
-            case 'Q':
-                return WQ;
-            case 'K':
-                return WK;
-            case 'p':
-                return BP;
-            case 'n':
-                return BN;
-            case 'b':
-                return BB;
-            case 'r':
-                return BR;
-            case 'q':
-                return BQ;
-            case 'k':
-                return BK;
-        }
-        // empty
-        return -1;
-    }
-
-    public static void printBoard(char[][] board) {
-        String output = "";
-        for (char[] chars : board) {
-            for (char aChar : chars) output += aChar;
-            output += '\n';
-        }
-        Log.d("test", output);
-    }
-
-    private void resetBoard() {
-        chessBoard = new char[8][8];
-        for (int i = 0; i < startingBoard.length; i++)
-            chessBoard[i] = Arrays.copyOf(startingBoard[i], startingBoard.length);
-    }
 
     public Game(Board board, boolean white) {
         this.board = board;
         arrayToBitboards();
         engine = new Engine();
     }
-
-    /*
-        Making moves
-     */
 
     public void makeRealMove(Move move) {
         castleFlags = MoveGenerator.updateCastling(move, boards, castleFlags);
@@ -170,9 +90,6 @@ public class Game {
         board.updateBar(score, engine.mate);
     }
 
-    /*
-        Getting moves
-     */
 
     public List<Move> possibleMoves(boolean white) {
         return MoveGenerator.possibleMoves(white, boards, castleFlags);
@@ -195,9 +112,6 @@ public class Game {
         return engine.scoreMove(boards, castleFlags, white);
     }
 
-    /*
-        Updating board
-     */
 
     public char updateBoard(Move move) {
         char piece = chessBoard[move.endRow][move.endCol];
@@ -232,9 +146,6 @@ public class Game {
         }
     }
 
-    /*
-        Analyze
-     */
 
     public Analyze startAnalyze(boolean white, ProgressBar bar) {
         arrayToBitboards();
@@ -244,9 +155,6 @@ public class Game {
         return analyze;
     }
 
-    /*
-        Other functions
-     */
 
     public boolean kingSafe(boolean white) {
         return MoveGenerator.kingSafe(white, boards);
@@ -266,6 +174,7 @@ public class Game {
         finishGame(!moves.isEmpty(), white);
     }
 
+
     private void finishGame(boolean moveCounter, boolean white) {
         if (!moveCounter) {
             if (kingSafe(white)) {
@@ -283,16 +192,54 @@ public class Game {
         }
     }
 
-    public long[] getBoards() {
-        return boards;
+    private void resetBoard() {
+        chessBoard = new char[8][8];
+        for (int i = 0; i < startingBoard.length; i++)
+            chessBoard[i] = Arrays.copyOf(startingBoard[i], startingBoard.length);
     }
 
-    public void setBoards(long[] boards) {
-        this.boards = boards;
+    private static int getBoardFromChar(char piece) {
+        switch (piece) {
+            case 'P':
+                return WP;
+            case 'N':
+                return WN;
+            case 'B':
+                return WB;
+            case 'R':
+                return WR;
+            case 'Q':
+                return WQ;
+            case 'K':
+                return WK;
+            case 'p':
+                return BP;
+            case 'n':
+                return BN;
+            case 'b':
+                return BB;
+            case 'r':
+                return BR;
+            case 'q':
+                return BQ;
+            case 'k':
+                return BK;
+        }
+        // empty
+        return -1;
     }
 
-    public boolean[] getCastleFlags() {
-        return castleFlags;
+    private void arrayToBitboards() {
+        boards = new long[]{0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,};
+        castleFlags = new boolean[]{true, true, true, true};
+        resetBoard();
+        long binary = 1L;
+        for (int i = 0; i < 64; i++) {
+            int board = getBoardFromChar(chessBoard[i / 8][i % 8]);
+            if (board != -1) {
+                boards[board] += binary;
+            }
+            binary = binary << 1;
+        }
     }
-
 }
