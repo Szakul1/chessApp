@@ -16,17 +16,19 @@ import com.example.chessapp.R;
 @SuppressLint("ViewConstructor")
 public class PromotionChoice extends View {
 
+    private final DialogManager dialogManager;
     private final Bitmap pieces;
+    private final Rect[] piecesSource;
     private final boolean white;
     private Rect[][] piecesDst;
     private int blockSize;
-    private final Board board;
 
-    public PromotionChoice(Context context, Board board, boolean white) {
+    public PromotionChoice(DialogManager dialogManager, Context context, Rect[] piecesSource, boolean white) {
         super(context);
+        this.dialogManager = dialogManager;
         pieces = BitmapFactory.decodeResource(context.getResources(), R.drawable.pieces);
+        this.piecesSource = piecesSource;
         this.white = white;
-        this.board = board;
     }
 
 
@@ -41,15 +43,15 @@ public class PromotionChoice extends View {
         canvas.drawRect(blockSize, blockSize, blockSize * 2, blockSize * 2, p);
 
         if (white) {
-            canvas.drawBitmap(pieces, board.piecesSource[1], piecesDst[0][0], p);
-            canvas.drawBitmap(pieces, board.piecesSource[2], piecesDst[0][1], p);
-            canvas.drawBitmap(pieces, board.piecesSource[3], piecesDst[1][0], p);
-            canvas.drawBitmap(pieces, board.piecesSource[4], piecesDst[1][1], p);
+            canvas.drawBitmap(pieces, piecesSource[1], piecesDst[0][0], p);
+            canvas.drawBitmap(pieces, piecesSource[2], piecesDst[0][1], p);
+            canvas.drawBitmap(pieces, piecesSource[3], piecesDst[1][0], p);
+            canvas.drawBitmap(pieces, piecesSource[4], piecesDst[1][1], p);
         } else {
-            canvas.drawBitmap(pieces, board.piecesSource[7], piecesDst[0][0], p);
-            canvas.drawBitmap(pieces, board.piecesSource[8], piecesDst[0][1], p);
-            canvas.drawBitmap(pieces, board.piecesSource[9], piecesDst[1][0], p);
-            canvas.drawBitmap(pieces, board.piecesSource[10], piecesDst[1][1], p);
+            canvas.drawBitmap(pieces, piecesSource[7], piecesDst[0][0], p);
+            canvas.drawBitmap(pieces, piecesSource[8], piecesDst[0][1], p);
+            canvas.drawBitmap(pieces, piecesSource[9], piecesDst[1][0], p);
+            canvas.drawBitmap(pieces, piecesSource[10], piecesDst[1][1], p);
         }
 
         p.setColor(Color.WHITE);
@@ -81,20 +83,22 @@ public class PromotionChoice extends View {
         int newX = (int) (event.getX() / getWidth() * 2);
         int newY = (int) (event.getY() / getHeight() * 2);
 
+        char piece = ' ';
         switch (newY + "" + newX) {
             case "00":
-                board.cancelDialog('Q');
+                piece = 'Q';
                 break;
             case "01":
-                board.cancelDialog('N');
+                piece = 'N';
                 break;
             case "10":
-                board.cancelDialog('B');
+                piece = 'B';
                 break;
             case "11":
-                board.cancelDialog('R');
+                piece = 'R';
                 break;
         }
+        dialogManager.cancelDialog(white ? piece : Character.toLowerCase(piece));
 
         return false;
     }

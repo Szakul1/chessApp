@@ -78,7 +78,7 @@ public class Rating {
     }
 
     public boolean captureMove(Move move, long opponentPieces) {
-        if (move.type== EN_PASSANT) {
+        if (move.type == EN_PASSANT) {
             return true;
         }
         int position = move.endRow * 8 + move.endCol;

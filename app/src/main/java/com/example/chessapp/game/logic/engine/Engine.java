@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Engine {
-    public static int globalDepth = 4;
+    public static int globalDepth = 5;
     private final static int mateScore = 49000;
     private final static int infinity = 50000;
     private final Rating rating;
@@ -34,7 +34,7 @@ public class Engine {
         if (Math.abs(score) >= mateScore - globalDepth) {
             mate = (mateScore - Math.abs(score)) / 2;
         }
-
+        System.out.println("nodes: " + nodes);
         return score;
     }
 
@@ -115,7 +115,7 @@ public class Engine {
                 }
             }
             moveScores[maxIndex] = Integer.MIN_VALUE;
-            sortedMoves.add(moves.get(i));
+            sortedMoves.add(moves.get(maxIndex));
         }
         return sortedMoves;
     }

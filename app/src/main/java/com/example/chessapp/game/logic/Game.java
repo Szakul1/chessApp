@@ -18,10 +18,10 @@ import static com.example.chessapp.game.type.MoveType.PROMOTION;
 
 import android.widget.ProgressBar;
 
-import com.example.chessapp.game.gui.Board;
 import com.example.chessapp.game.logic.engine.Analyze;
 import com.example.chessapp.game.logic.engine.Engine;
 import com.example.chessapp.game.type.Move;
+import com.example.chessapp.menu.GameFragment;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.ListIterator;
 
 public class Game {
-    private final Board board;
+    private final GameFragment gameFragment;
     private final Engine engine;
     // r - rook, k - knight, b - bishop, q - queen, a - king p - pawn
     // upper for white lower for black
@@ -42,13 +42,14 @@ public class Game {
             {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
             {'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'},
             {'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'}};
-    public char[][] chessBoard;
+    private final char[][] chessBoard;
     private long[] boards = {0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,};
     private boolean[] castleFlags = {true, true, true, true};
     public List<Move> moveHistory = new ArrayList<>();
 
-    public Game(Board board, boolean white) {
-        this.board = board;
+    public Game(GameFragment gameFragment, char[][] chessBoard, boolean white) {
+        this.gameFragment = gameFragment;
+        this.chessBoard = chessBoard;
         arrayToBitboards();
         engine = new Engine();
     }
@@ -65,7 +66,7 @@ public class Game {
         for (Move move : possibleMoves) {
             if (startRow == move.startRow && startCol == move.startCol && endRow == move.endRow && endCol == move.endCol) {
                 if (move.type == PROMOTION) {
-                    board.showPromotionDialog(move);
+                    gameFragment.showPromotionDialog(move);
                     return false;
                 }
                 makeRealMove(move);
@@ -76,7 +77,7 @@ public class Game {
     }
 
     public void response(boolean white) {
-        board.repaint();
+//        board.repaint();
 
         int score = engine.findBestMove(boards, castleFlags, white);
         score = white ? score : -score;
@@ -87,7 +88,7 @@ public class Game {
             makeRealMove(move);
         }
         finishGame(isMove, white);
-        board.updateBar(score, engine.mate);
+        gameFragment.updateBar(score, engine.mate);
     }
 
 
@@ -178,22 +179,21 @@ public class Game {
     private void finishGame(boolean moveCounter, boolean white) {
         if (!moveCounter) {
             if (kingSafe(white)) {
-                board.finishedGame = "Draw Stalemate";
+                gameFragment.finishedGame = "Draw Stalemate";
             } else {
-                board.finishedGame = (white ? "Black" : "White") + " won";
+                gameFragment.finishedGame = (white ? "Black" : "White") + " won";
             }
-            board.showEndDialog();
+            gameFragment.showEndDialog();
         } else {
             long occupied = MoveGenerator.getOccupied(boards);
             if ((boards[WK] | boards[BK]) == occupied) {
-                board.finishedGame = "Draw";
-                board.showEndDialog();
+                gameFragment.finishedGame = "Draw";
+                gameFragment.showEndDialog();
             }
         }
     }
 
     private void resetBoard() {
-        chessBoard = new char[8][8];
         for (int i = 0; i < startingBoard.length; i++)
             chessBoard[i] = Arrays.copyOf(startingBoard[i], startingBoard.length);
     }
