@@ -25,8 +25,7 @@ public class DialogManager {
     private final GameFragment gameFragment;
     private final Context context;
 
-    private AlertDialog dialog;
-    private WindowManager.LayoutParams lp;
+    private AlertDialog promotionDialog;
 
     private Dialog endDialog;
 
@@ -78,7 +77,8 @@ public class DialogManager {
         title.setTextColor(Color.WHITE);
         layout.addView(title, params);
 
-        PromotionChoice promotionChoice = new PromotionChoice(this, context, gameFragment.getPieceSource(), gameFragment.whiteTurn);
+        PromotionChoice promotionChoice = new PromotionChoice(this, context, gameFragment.getPieces(),
+                gameFragment.getPieceSource(), gameFragment.whiteTurn);
         if (!gameFragment.whiteTurn) {
             title.setRotation(180);
             promotionChoice.setRotation(180);
@@ -87,12 +87,13 @@ public class DialogManager {
 
         alertDialogBuilder.setView(layout);
         alertDialogBuilder.setCancelable(false);
-        dialog = alertDialogBuilder.create();
-        setParams(dialog);
+        promotionDialog = alertDialogBuilder.create();
+        // fullscreen dialog
+        setParams(promotionDialog);
     }
 
     public void cancelDialog(char piece) {
-        dialog.cancel();
+        promotionDialog.cancel();
         promotionMove.promotionPiece = piece;
         gameFragment.makeMove(promotionMove);
     }
@@ -102,12 +103,10 @@ public class DialogManager {
         endDialog.findViewById(R.id.end_normal).setVisibility(GONE);
         endDialog.findViewById(R.id.end_analyze).setVisibility(VISIBLE);
         gameFragment.startAnalyze(endDialog, endDialog.findViewById(R.id.loading_bar));
-        //endDialog.getWindow().setAttributes(lp);
-
     }
 
     private void setParams(Dialog dialog) {
-        lp = new WindowManager.LayoutParams();
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
         lp.copyFrom(dialog.getWindow().getAttributes());
         lp.width = WindowManager.LayoutParams.MATCH_PARENT;
         lp.height = WindowManager.LayoutParams.WRAP_CONTENT;

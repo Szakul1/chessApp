@@ -55,10 +55,12 @@ public class Game {
     }
 
     public void makeRealMove(Move move) {
+        boolean capture = capture(move.endRow, move.endCol); // for sound playing
         castleFlags = MoveGenerator.updateCastling(move, boards, castleFlags);
         boards = MoveGenerator.makeMove(move, boards);
         move.capturePiece = updateBoard(move);
         moveHistory.add(move);
+        gameFragment.playSound(capture);
     }
 
     public boolean checkMoveAndMake(int startRow, int startCol, int endRow, int endCol, boolean white) {

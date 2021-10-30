@@ -3,7 +3,6 @@ package com.example.chessapp.game.gui;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -11,10 +10,10 @@ import android.graphics.Rect;
 import android.view.MotionEvent;
 import android.view.View;
 
-import com.example.chessapp.R;
-
 @SuppressLint("ViewConstructor")
 public class PromotionChoice extends View {
+
+    private static final Paint paint = new Paint();
 
     private final DialogManager dialogManager;
     private final Bitmap pieces;
@@ -23,10 +22,10 @@ public class PromotionChoice extends View {
     private Rect[][] piecesDst;
     private int blockSize;
 
-    public PromotionChoice(DialogManager dialogManager, Context context, Rect[] piecesSource, boolean white) {
+    public PromotionChoice(DialogManager dialogManager, Context context, Bitmap pieces, Rect[] piecesSource, boolean white) {
         super(context);
         this.dialogManager = dialogManager;
-        pieces = BitmapFactory.decodeResource(context.getResources(), R.drawable.pieces);
+        this.pieces = pieces;
         this.piecesSource = piecesSource;
         this.white = white;
     }
@@ -36,32 +35,30 @@ public class PromotionChoice extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        Paint p = new Paint();
-
-        p.setColor(Color.rgb(118, 150, 86));
-        canvas.drawRect(0, 0, blockSize, blockSize, p);
-        canvas.drawRect(blockSize, blockSize, blockSize * 2, blockSize * 2, p);
+        paint.setColor(Color.rgb(118, 150, 86));
+        canvas.drawRect(0, 0, blockSize, blockSize, paint);
+        canvas.drawRect(blockSize, blockSize, blockSize * 2, blockSize * 2, paint);
 
         if (white) {
-            canvas.drawBitmap(pieces, piecesSource[1], piecesDst[0][0], p);
-            canvas.drawBitmap(pieces, piecesSource[2], piecesDst[0][1], p);
-            canvas.drawBitmap(pieces, piecesSource[3], piecesDst[1][0], p);
-            canvas.drawBitmap(pieces, piecesSource[4], piecesDst[1][1], p);
+            canvas.drawBitmap(pieces, piecesSource[1], piecesDst[0][0], paint);
+            canvas.drawBitmap(pieces, piecesSource[2], piecesDst[0][1], paint);
+            canvas.drawBitmap(pieces, piecesSource[3], piecesDst[1][0], paint);
+            canvas.drawBitmap(pieces, piecesSource[4], piecesDst[1][1], paint);
         } else {
-            canvas.drawBitmap(pieces, piecesSource[7], piecesDst[0][0], p);
-            canvas.drawBitmap(pieces, piecesSource[8], piecesDst[0][1], p);
-            canvas.drawBitmap(pieces, piecesSource[9], piecesDst[1][0], p);
-            canvas.drawBitmap(pieces, piecesSource[10], piecesDst[1][1], p);
+            canvas.drawBitmap(pieces, piecesSource[7], piecesDst[0][0], paint);
+            canvas.drawBitmap(pieces, piecesSource[8], piecesDst[0][1], paint);
+            canvas.drawBitmap(pieces, piecesSource[9], piecesDst[1][0], paint);
+            canvas.drawBitmap(pieces, piecesSource[10], piecesDst[1][1], paint);
         }
 
-        p.setColor(Color.WHITE);
-        p.setTextSize((int) (blockSize / 6));
-        p.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("Queen", (int) (blockSize / 2), blockSize - 20, p);
-        canvas.drawText("Rook", (int) (blockSize / 2) + blockSize, blockSize - 20 + blockSize, p);
-        p.setColor(Color.BLACK);
-        canvas.drawText("Knight", (int) (blockSize / 2) + blockSize, blockSize - 20, p);
-        canvas.drawText("Bishop", (int) (blockSize / 2), blockSize - 20 + blockSize, p);
+        paint.setColor(Color.WHITE);
+        paint.setTextSize(blockSize / 6f);
+        paint.setTextAlign(Paint.Align.CENTER);
+        canvas.drawText("Queen", blockSize / 2f, blockSize - 20, paint);
+        canvas.drawText("Rook", blockSize / 2f + blockSize, blockSize - 20 + blockSize, paint);
+        paint.setColor(Color.BLACK);
+        canvas.drawText("Knight", blockSize / 2f + blockSize, blockSize - 20, paint);
+        canvas.drawText("Bishop", blockSize / 2f, blockSize - 20 + blockSize, paint);
     }
 
     @Override
@@ -109,6 +106,4 @@ public class PromotionChoice extends View {
         int size = Math.min(getMeasuredWidth(), getMeasuredHeight());
         setMeasuredDimension(size, size);
     }
-
-
 }

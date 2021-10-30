@@ -3,7 +3,10 @@ package com.example.chessapp.menu;
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.app.Dialog;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Rect;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,7 +34,10 @@ import java.util.List;
 public class GameFragment extends Fragment {
 
     private static final int boardSize = 8;
-    public boolean whiteTurn;
+
+    // settings
+    private final boolean twoPlayers;
+    private final boolean color;
 
     // communication component
     public char[][] chessBoard;
@@ -46,9 +52,16 @@ public class GameFragment extends Fragment {
     private DialogManager dialogManager;
     private LinearLayout linearLayout;
 
-    private final boolean twoPlayers;
-    private final boolean color;
+    // images
+    private Bitmap pieces;
+    private Rect[] piecesSource;
 
+    // sounds
+    private MediaPlayer captureSound;
+    private MediaPlayer slideSound;
+
+    // flags
+    public boolean whiteTurn;
     public List<Move> moves;
     public boolean selection;
     public int selectedX;
@@ -61,6 +74,7 @@ public class GameFragment extends Fragment {
         this.color = color;
         whiteTurn = color;
         chessBoard = new char[boardSize][boardSize];
+
     }
 
     @Override
@@ -76,14 +90,11 @@ public class GameFragment extends Fragment {
         getComponents();
         addBoard();
         init();
-        requireView().findViewById(R.id.main_restart).setOnClickListener(v -> {init(); board.repaint();});
-    }
 
-    private void getComponents() {
-        linearLayout = requireView().findViewById(R.id.board);
-        progressBar = requireView().findViewById(R.id.positionBar);
-        progressText = requireView().findViewById(R.id.positionValue);
-        params = (ConstraintLayout.LayoutParams) linearLayout.getLayoutParams();
+        requireView().findViewById(R.id.main_restart).setOnClickListener(v -> {
+            init();
+            board.repaint();
+        });
     }
 
     public void init() {
@@ -98,14 +109,6 @@ public class GameFragment extends Fragment {
         }
 
         setBoardBias(0.5f);
-    }
-
-    private void addBoard() {
-        board = new Board(this, chessBoard, getActivity(), twoPlayers, color);
-        board.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT));
-        linearLayout.addView(board, 1);
     }
 
     public void sendInput(int newX, int newY) {
@@ -141,34 +144,6 @@ public class GameFragment extends Fragment {
         board.repaint();
     }
 
-    private void checkMove(int newX, int newY) {
-        selection = game.isMyPiece(newY, newX, whiteTurn);
-        boolean isCapture = game.capture(newY, newX); // for sound playing
-        if (game.checkMoveAndMake(selectedY, selectedX, newY, newX, whiteTurn)) {
-//            if (isCapture)
-//                capture.start();
-//            else
-//                slide.start();
-            updateGame();
-        }
-    }
-
-    private void updateGame() {
-        if (twoPlayers) {
-            whiteTurn = !whiteTurn;
-            new Thread(() -> {
-                int score = game.scoreMove(whiteTurn);
-                requireActivity().runOnUiThread(() -> updateBar(whiteTurn ? score : -score, -1));
-            }).start();
-        } else {
-            game.response(!whiteTurn);
-//            slide.start();
-        }
-        game.gameFinished(whiteTurn);
-
-        selection = false;
-    }
-
     @SuppressLint("SetTextI18n")
     public void updateBar(int value, int mate) {
         if (mate == -1) {
@@ -193,11 +168,6 @@ public class GameFragment extends Fragment {
         analyzeDesk.showAnalyzeDesk();
     }
 
-    private void setBoardBias(float bias) {
-        params.verticalBias = bias;
-        linearLayout.setLayoutParams(params);
-    }
-
     public void repaint() {
         board.repaint();
     }
@@ -215,6 +185,76 @@ public class GameFragment extends Fragment {
     }
 
     public Rect[] getPieceSource() {
-        return board.piecesSource;
+        return piecesSource;
+    }
+
+    public Bitmap getPieces() {
+        return pieces;
+    }
+
+    public void playSound(boolean capture) {
+        if (capture)
+            captureSound.start();
+        else
+            slideSound.start();
+    }
+
+    private void getComponents() {
+        linearLayout = requireView().findViewById(R.id.board);
+        progressBar = requireView().findViewById(R.id.positionBar);
+        progressText = requireView().findViewById(R.id.positionValue);
+        params = (ConstraintLayout.LayoutParams) linearLayout.getLayoutParams();
+
+        // assets
+        pieces = BitmapFactory.decodeResource(getResources(), R.drawable.pieces);
+        int pieceImageSize = pieces.getHeight() / 2;
+        piecesSource = new Rect[12]; // set piece sources from sprite sheet
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 6; j++) {
+                piecesSource[i * 6 + j] = new Rect(pieceImageSize * j, pieceImageSize * i,
+                        (j + 1) * pieceImageSize, (i + 1) * pieceImageSize);
+            }
+        }
+
+        // sounds
+        captureSound = MediaPlayer.create(requireContext(), R.raw.capture);
+        captureSound.setOnCompletionListener(MediaPlayer::release);
+        slideSound = MediaPlayer.create(requireContext(), R.raw.slide);
+        slideSound.setOnCompletionListener(MediaPlayer::release);
+    }
+
+    private void addBoard() {
+        board = new Board(this, chessBoard, getActivity(), twoPlayers, color, pieces, piecesSource);
+        board.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT));
+        linearLayout.addView(board, 1);
+    }
+
+    private void checkMove(int newX, int newY) {
+        selection = game.isMyPiece(newY, newX, whiteTurn);
+        if (game.checkMoveAndMake(selectedY, selectedX, newY, newX, whiteTurn)) {
+            updateGame();
+        }
+    }
+
+    private void updateGame() {
+        if (twoPlayers) {
+            whiteTurn = !whiteTurn;
+            new Thread(() -> {
+                int score = game.scoreMove(whiteTurn);
+                requireActivity().runOnUiThread(() -> updateBar(whiteTurn ? score : -score, -1));
+            }).start();
+        } else {
+            game.response(!whiteTurn);
+        }
+        game.gameFinished(whiteTurn);
+
+        selection = false;
+    }
+
+    private void setBoardBias(float bias) {
+        params.verticalBias = bias;
+        linearLayout.setLayoutParams(params);
     }
 }

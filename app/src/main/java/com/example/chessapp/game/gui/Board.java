@@ -3,19 +3,16 @@ package com.example.chessapp.game.gui;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
-import android.media.MediaPlayer;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 import androidx.annotation.NonNull;
 
-import com.example.chessapp.R;
 import com.example.chessapp.game.type.Move;
 import com.example.chessapp.menu.GameFragment;
 
@@ -35,43 +32,28 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     private float pieceWidth;
     private float pieceHeight;
     private final Bitmap pieces;
-    public Rect[] piecesSource;
+    private final Rect[] piecesSource;
 
     // flags
     private final boolean twoPlayers;
     private final boolean color;
 
-    // components
-    private MediaPlayer capture;
-    private MediaPlayer slide;
-
-    public Board(GameFragment gameFragment, char[][] chessBoard, Context context, boolean twoPlayers, boolean color) {
+    public Board(GameFragment gameFragment, char[][] chessBoard, Context context, boolean twoPlayers,
+                 boolean color, Bitmap pieces, Rect[] piecesSource) {
         super(context);
         this.gameFragment = gameFragment;
         this.chessBoard = chessBoard;
-        pieces = BitmapFactory.decodeResource(context.getResources(), R.drawable.pieces);
         this.twoPlayers = twoPlayers;
         this.color = color;
+        this.pieces = pieces;
+        this.piecesSource = piecesSource;
         getHolder().addCallback(this);
     }
 
     @Override
     public void surfaceCreated(@NonNull SurfaceHolder holder) {
-        int pieceImageSize = pieces.getHeight() / 2;
         pieceWidth = getWidth() / (float) boardSize;
         pieceHeight = getHeight() / (float) boardSize;
-        piecesSource = new Rect[12]; // set piece sources from sprite sheet
-        for (int i = 0; i < 2; i++) {
-            for (int j = 0; j < 6; j++) {
-                piecesSource[i * 6 + j] = new Rect(pieceImageSize * j, pieceImageSize * i,
-                        (j + 1) * pieceImageSize, (i + 1) * pieceImageSize);
-            }
-        }
-
-        // setting sounds
-//        capture = MediaPlayer.create(context, R.raw.capture);
-//        slide = MediaPlayer.create(context, R.raw.slide);
-        // setting all components
         repaint();
     }
 
