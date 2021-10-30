@@ -37,6 +37,8 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     // flags
     private final boolean twoPlayers;
     private final boolean color;
+    private int selectedX;
+    private int selectedY;
 
     public Board(GameFragment gameFragment, char[][] chessBoard, Context context, boolean twoPlayers,
                  boolean color, Bitmap pieces, Rect[] piecesSource) {
@@ -209,9 +211,9 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         }
         if (gameFragment.selection) {
             p.setARGB(128, 255, 255, 0);
-            canvas.drawRect(gameFragment.selectedX * pieceWidth, gameFragment.selectedY * pieceWidth,
-                    (gameFragment.selectedX + 1) * pieceWidth,
-                    (gameFragment.selectedY + 1) * pieceHeight, p);
+            canvas.drawRect(selectedX * pieceWidth, selectedY * pieceWidth,
+                    (selectedX + 1) * pieceWidth,
+                    (selectedY + 1) * pieceHeight, p);
         }
     }
 
@@ -225,9 +227,9 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        int newX = (int) (event.getX() / getWidth() * boardSize);
-        int newY = (int) (event.getY() / getHeight() * boardSize);
-        gameFragment.sendInput(newX, newY);
+        selectedX = (int) (event.getX() / getWidth() * boardSize);
+        selectedY = (int) (event.getY() / getHeight() * boardSize);
+        gameFragment.sendInput(selectedX, selectedY);
 
         repaint();
         return false;

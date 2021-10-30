@@ -64,8 +64,8 @@ public class GameFragment extends Fragment {
     public boolean whiteTurn;
     public List<Move> moves;
     public boolean selection;
-    public int selectedX;
-    public int selectedY;
+    private int selectedX;
+    private int selectedY;
     private boolean analyzing;
     public String finishedGame;
 
@@ -146,9 +146,7 @@ public class GameFragment extends Fragment {
 
     public void makeMove(Move move) {
         game.makeRealMove(move);
-
         updateGame();
-        board.repaint();
     }
 
     @SuppressLint("SetTextI18n")
@@ -244,6 +242,7 @@ public class GameFragment extends Fragment {
     }
 
     private void updateGame() {
+        repaint();
         if (twoPlayers) {
             whiteTurn = !whiteTurn;
             new Thread(() -> {
@@ -252,6 +251,7 @@ public class GameFragment extends Fragment {
             }).start();
         } else {
             game.response(!whiteTurn);
+            repaint();
         }
         game.gameFinished(whiteTurn);
 

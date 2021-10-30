@@ -79,8 +79,6 @@ public class Game {
     }
 
     public void response(boolean white) {
-//        board.repaint();
-
         int score = engine.findBestMove(boards, castleFlags, white);
         score = white ? score : -score;
         Move move = engine.bestMove;
