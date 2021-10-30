@@ -97,6 +97,13 @@ public class GameFragment extends Fragment {
         });
     }
 
+    @Override
+    public void onStop() {
+        super.onStop();
+        captureSound.release();
+        slideSound.release();
+    }
+
     public void init() {
         selection = false;
         whiteTurn = color;
@@ -218,9 +225,7 @@ public class GameFragment extends Fragment {
 
         // sounds
         captureSound = MediaPlayer.create(requireContext(), R.raw.capture);
-        captureSound.setOnCompletionListener(MediaPlayer::release);
         slideSound = MediaPlayer.create(requireContext(), R.raw.slide);
-        slideSound.setOnCompletionListener(MediaPlayer::release);
     }
 
     private void addBoard() {
