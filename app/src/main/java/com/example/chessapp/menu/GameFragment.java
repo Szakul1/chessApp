@@ -74,13 +74,11 @@ public class GameFragment extends Fragment {
         this.color = color;
         whiteTurn = color;
         chessBoard = new char[boardSize][boardSize];
-
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-
         return inflater.inflate(R.layout.fragment_game, container, false);
     }
 

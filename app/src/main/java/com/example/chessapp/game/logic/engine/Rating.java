@@ -9,36 +9,25 @@ import com.example.chessapp.game.type.Move;
 
 public class Rating {
 
-    public int scoreMove(Move move, long[] boards, boolean white, int ply) {
-        long opponentPieces = MoveGenerator.getMyPieces(!white, boards);
+    public int scoreMove(Move move, long[] boards, boolean white, long opponentPieces, int ply) {
         if (move.type == EN_PASSANT)
             return mvv_lva[WP][BP];
-        int startPieces = 0;
-        int targetPiece = 0;
-        if (captureMove(move, opponentPieces)) {
-            for (int i = 0; i < boards.length - 1; i++) {
-                int start = move.startRow * 8 + move.startCol;
-                int target = move.endRow * 8 + move.endCol;
-                if ((boards[i] & (1L << start)) != 0) {
-                    startPieces = i;
-                } else if ((boards[i] & (1L << target)) != 0) {
-                    targetPiece = i;
-                }
-            }
-            return mvv_lva[startPieces][targetPiece] + 10000;
-        }
-//        else {
-//            if (killerMoves[0][ply] == move) {
-//                return 9000;
-//            } else if (killerMoves[1][ply] == move) {
-//                return 8000;
-//            } else {
-//                return historyMoves[]
-//            }
-//        }
-        // TODO quiet move
 
-        return 0;
+        if (MoveGenerator.captureMove(move, opponentPieces)) {
+            MoveGenerator.getPieces(move, boards);
+            return mvv_lva[MoveGenerator.startPiece][MoveGenerator.targetPiece] + 10000;
+        }
+        else {
+            if (killerMoves[0][ply] != null && killerMoves[0][ply].equals(move)) {
+                return 9000;
+            } else if (killerMoves[1][ply] != null && killerMoves[1][ply].equals(move)) {
+                return 8000;
+            } else {
+                MoveGenerator.getPieces(move, boards);
+                return historyMoves[MoveGenerator.startPiece][MoveGenerator.targetSquare];
+            }
+        }
+
     }
 
     public int evaluate(long[] boards, boolean white) {
@@ -77,15 +66,6 @@ public class Rating {
         return (7 - position / 8) * 8 + position % 8;
     }
 
-    public boolean captureMove(Move move, long opponentPieces) {
-        if (move.type == EN_PASSANT) {
-            return true;
-        }
-        int position = move.endRow * 8 + move.endCol;
-        // not capture
-        return ((1L << position) & opponentPieces) != 0;
-    }
-
     /*
         (Victims) Pawn Knight Bishop   Rook  Queen   King
       (Attackers)
@@ -113,8 +93,10 @@ public class Rating {
             {100, 200, 300, 400, 500, 600, 100, 200, 300, 400, 500, 600}
     };
 
-    String[][] killerMoves = new String[2][64];
-    String[][] historyMoves = new String[12][64];
+    // [id][ply]
+    Move[][] killerMoves = new Move[2][64];
+    // [piece][square]
+    int[][] historyMoves = new int[12][64];
 
     // pawn positional score
     private final int[] pawn_score =

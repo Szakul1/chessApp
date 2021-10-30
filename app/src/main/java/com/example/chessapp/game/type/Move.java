@@ -4,6 +4,7 @@ import static com.example.chessapp.game.type.MoveType.CASTLE;
 import static com.example.chessapp.game.type.MoveType.PROMOTION;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 public class Move {
     public int startRow;
@@ -64,5 +65,16 @@ public class Move {
             moveString += promotionPiece;
         }
         return moveString;
+    }
+
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        if (obj instanceof Move) {
+            Move move = (Move) obj;
+            return startRow == move.startRow && startCol == move.startCol && endRow == move.endRow && endCol == move.endCol &&
+                    type == move.type;
+        }
+        return false;
     }
 }

@@ -55,6 +55,9 @@ public class MoveGenerator {
                     0x8040201008040201L, 0x4020100804020100L, 0x2010080402010000L, 0x1008040201000000L,
                     0x804020100000000L, 0x402010000000000L, 0x201000000000000L, 0x100000000000000L};
 
+    public static int startPiece, targetPiece;
+    public static int startSquare, targetSquare;
+
     /*
         Communication
      */
@@ -126,6 +129,34 @@ public class MoveGenerator {
     public static long getMyPieces(boolean white, long[] pieces) {
         return white ? pieces[WP] | pieces[WN] | pieces[WB] | pieces[WR] | pieces[WQ] | pieces[WK] :
                 pieces[BP] | pieces[BN] | pieces[BB] | pieces[BR] | pieces[BQ] | pieces[BK];
+    }
+
+    /**
+     * Assigns moving piece to startPiece and target piece to targetPiece
+     * @param move move
+     * @param boards bit boards
+     */
+    public static void getPieces(Move move, long[] boards) {
+        startSquare = move.startRow * 8 + move.startCol;
+        targetSquare = move.endRow * 8 + move.endCol;
+        for (int i = 0; i < boards.length - 1; i++) {
+            if ((boards[i] & (1L << startSquare)) != 0) {
+                startPiece = i;
+            } else if ((boards[i] & (1L << targetSquare)) != 0) {
+                targetPiece = i;
+            }
+        }
+    }
+
+    /**
+     * Checks if move is capture
+     * @param move move
+     * @param opponentPieces bitboards of opponent pieces
+     * @return true if capture
+     */
+    public static boolean captureMove(Move move, long opponentPieces) {
+        int position = move.endRow * 8 + move.endCol;
+        return ((1L << position) & opponentPieces) != 0;
     }
 
     /**

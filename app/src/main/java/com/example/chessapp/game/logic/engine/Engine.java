@@ -3,7 +3,6 @@ package com.example.chessapp.game.logic.engine;
 import com.example.chessapp.game.logic.MoveGenerator;
 import com.example.chessapp.game.type.Move;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class Engine {
@@ -29,8 +28,11 @@ public class Engine {
         nodes = 0;
         test = 0;
         depth0 = 0;
-        int score = 0;
+        int score;
+        long start = System.currentTimeMillis();
         score = alphaBeta(-infinity, infinity, globalDepth, boards, castleFlags, white);
+        long end = System.currentTimeMillis();
+        System.out.println("time: " + (end - start));
         if (Math.abs(score) >= mateScore - globalDepth) {
             mate = (mateScore - Math.abs(score)) / 2;
         }
@@ -55,7 +57,8 @@ public class Engine {
 
         int ply = globalDepth - depth;
         List<Move> moves = MoveGenerator.possibleMoves(white, boards, castleFlags);
-        moves = sortMoves(moves, boards, white, ply);
+        long opponentPieces = MoveGenerator.getMyPieces(!white, boards);
+        sortMoves(moves, boards, white, opponentPieces, ply);
         int legalMoves = 0;
         Move bestMove = null;
         int oldAlpha = alpha;
@@ -69,13 +72,16 @@ public class Engine {
 
             if (score > alpha) {
                 if (score >= beta) {
-
-                    // TODO
-                    // rating.killerMoves[1][ply] = rating.killerMoves[0][ply];
-//                    rating.killerMoves[0][ply] = move;
+                    if (!MoveGenerator.captureMove(move, opponentPieces)) {
+                        rating.killerMoves[1][ply] = rating.killerMoves[0][ply];
+                        rating.killerMoves[0][ply] = move;
+                    }
 
                     return beta;
                 }
+                MoveGenerator.getPieces(move, boards);
+                rating.historyMoves[MoveGenerator.startPiece][MoveGenerator.targetSquare] += depth;
+
                 alpha = score;
                 bestMove = move;
             }
@@ -96,28 +102,47 @@ public class Engine {
         return alpha;
     }
 
-    public List<Move> sortMoves(List<Move> moves, long[] boards, boolean white, int ply) {
+    private void sortMoves(List<Move> moves, long[] boards, boolean white, long opponentPieces, int ply) {
         int[] moveScores = new int[moves.size()];
 
         for (int i = 0; i < moves.size(); i++) {
             Move move = moves.get(i);
-            moveScores[i] = rating.scoreMove(move, boards, white, ply);
+            moveScores[i] = rating.scoreMove(move, boards, white, opponentPieces, ply);
         }
 
-        List<Move> sortedMoves = new ArrayList<>();
-        for (int i = 0; i < moves.size(); i++) {
-            int maxScore = Integer.MIN_VALUE;
-            int maxIndex = 0;
-            for (int j = 0; j < moves.size(); j++) {
-                if (maxScore < moveScores[j]) {
-                    maxScore = moveScores[j];
-                    maxIndex = j;
-                }
-            }
-            moveScores[maxIndex] = Integer.MIN_VALUE;
-            sortedMoves.add(moves.get(maxIndex));
-        }
-        return sortedMoves;
+        quickSort(moves, moveScores, 0, moves.size() - 1);
     }
 
+    private void quickSort(List<Move> moves, int[] scores, int start, int end) {
+        if (start < end) {
+            int pivot = partition(moves, scores, start, end);
+            quickSort(moves, scores, start, pivot - 1);
+            quickSort(moves, scores, pivot + 1, end);
+        }
+    }
+
+    // sorting in descending order
+    private int partition(List<Move> moves, int[] scores, int start, int end) {
+        int pivot = scores[start];
+        int greaterIndex = start;
+
+        for (int i = start + 1; i <= end; i++) {
+            if (scores[i] > pivot) {
+                greaterIndex++;
+                swap(moves, scores, greaterIndex, i);
+            }
+        }
+        swap(moves, scores, greaterIndex, start);
+        return greaterIndex;
+    }
+
+    private void swap(List<Move> moves, int[] scores, int i1, int i2) {
+        Move tempMove = moves.get(i1);
+        moves.set(i1, moves.get(i2));
+        moves.set(i2, tempMove);
+
+        int tempScore = scores[i1];
+        scores[i1] = scores[i2];
+        scores[i2] = tempScore;
+    }
 }
