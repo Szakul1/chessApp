@@ -189,7 +189,7 @@ public class Board extends SurfaceView implements SurfaceHolder.Callback {
         p.setAntiAlias(true);
         Rect bounds = new Rect();
 
-        boolean color = false;
+        boolean color = true;
         for (int i = 0; i < boardSize; i++) {
             for (int j = 0; j < boardSize; j++) {
                 color = !color;

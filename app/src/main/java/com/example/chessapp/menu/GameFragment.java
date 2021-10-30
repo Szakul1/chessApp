@@ -105,6 +105,8 @@ public class GameFragment extends Fragment {
     public void init() {
         selection = false;
         whiteTurn = color;
+        analyzing = false;
+        finishedGame = null;
         moves = new ArrayList<>();
         game = new Game(this, chessBoard, color);
         analyzeDesk = new AnalyzeDesk(this, requireView());
