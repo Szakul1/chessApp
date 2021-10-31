@@ -9,7 +9,7 @@ import com.example.chessapp.game.type.Move;
 
 public class Rating {
 
-    public int scoreMove(Move move, long[] boards, boolean white, long opponentPieces, int ply) {
+    public int scoreMove(Move move, long[] boards, long opponentPieces, int ply) {
         if (move.type == EN_PASSANT)
             return mvv_lva[WP][BP];
 
@@ -94,9 +94,9 @@ public class Rating {
     };
 
     // [id][ply]
-    Move[][] killerMoves = new Move[2][64];
+    public Move[][] killerMoves;
     // [piece][square]
-    int[][] historyMoves = new int[12][64];
+    public int[][] historyMoves;
 
     // pawn positional score
     private final int[] pawn_score =
