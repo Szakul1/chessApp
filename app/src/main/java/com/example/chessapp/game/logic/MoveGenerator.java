@@ -40,17 +40,17 @@ public class MoveGenerator {
     private static final long KING_SPAN = 460039L;
     private static final long KNIGHT_SPAN = 43234889994L;
     private static final long[] CASTLE_ROOKS = {63, 56, 7, 0};
-    private static final long[] rowMasks8 = /* from rank1 to rank8 */
+    public static final long[] ROW_MASKS = /* from row1 to row8 */
             {0xFFL, 0xFF00L, 0xFF0000L, 0xFF000000L, 0xFF00000000L, 0xFF0000000000L, 0xFF000000000000L,
                     0xFF00000000000000L};
-    private static  final long[] columnMasks8 = /* from fileA to FileH */
+    public static  final long[] COLUMN_MASKS = /* from columnA to columnH */
             {0x101010101010101L, 0x202020202020202L, 0x404040404040404L, 0x808080808080808L, 0x1010101010101010L,
                     0x2020202020202020L, 0x4040404040404040L, 0x8080808080808080L};
-    private static  final long[] DiagonalMasks8 = /* from top left to bottom right */
+    private static  final long[] DIAGONAL_MASKS = /* from top left to bottom right */
             {0x1L, 0x102L, 0x10204L, 0x1020408L, 0x102040810L, 0x10204081020L, 0x1020408102040L, 0x102040810204080L,
                     0x204081020408000L, 0x408102040800000L, 0x810204080000000L, 0x1020408000000000L,
                     0x2040800000000000L, 0x4080000000000000L, 0x8000000000000000L};
-    private static  final long[] AntiDiagonalMasks8 = /* from top right to bottom left */
+    private static  final long[] ANTI_DIAGONAL_MASKS = /* from top right to bottom left */
             {0x80L, 0x8040L, 0x804020L, 0x80402010L, 0x8040201008L, 0x804020100804L, 0x80402010080402L,
                     0x8040201008040201L, 0x4020100804020100L, 0x2010080402010000L, 0x1008040201000000L,
                     0x804020100000000L, 0x402010000000000L, 0x201000000000000L, 0x100000000000000L};
@@ -139,6 +139,7 @@ public class MoveGenerator {
     public static void getPieces(Move move, long[] boards) {
         startSquare = move.startRow * 8 + move.startCol;
         targetSquare = move.endRow * 8 + move.endCol;
+        targetPiece = -1;
         for (int i = 0; i < boards.length - 1; i++) {
             if ((boards[i] & (1L << startSquare)) != 0) {
                 startPiece = i;
@@ -214,12 +215,12 @@ public class MoveGenerator {
 
     private static long makeMoveEP(long board, Move move) {
         if (isDoublePush(move, board)) {
-            return (move.startRow == 1 ? rowMasks8[3] : rowMasks8[4]) & columnMasks8[move.startCol];
+            return (move.startRow == 1 ? ROW_MASKS[3] : ROW_MASKS[4]) & COLUMN_MASKS[move.startCol];
         } else
             return 0;
     }
 
-    private static boolean isDoublePush(Move move, long board) {
+    public static boolean isDoublePush(Move move, long board) {
         int start = move.startRow * 8 + move.startCol;
         return (Math.abs(move.startRow - move.endRow) == 2) && (((board >> start) & 1) == 1);
     }
@@ -262,39 +263,39 @@ public class MoveGenerator {
 
     private static void possibleWP(List<Move> moveList, long WP, long BP, long EP) {
 
-        long pawnMoves = (WP >> 7) & notMyPieces & occupied & ~rowMasks8[0] & ~columnMasks8[0]; // capture right
+        long pawnMoves = (WP >> 7) & notMyPieces & occupied & ~ROW_MASKS[0] & ~COLUMN_MASKS[0]; // capture right
         addPawnMoves(moveList, pawnMoves, 1, -1);
 
-        pawnMoves = (WP >> 9) & notMyPieces & occupied & ~rowMasks8[0] & ~columnMasks8[7]; // capture left
+        pawnMoves = (WP >> 9) & notMyPieces & occupied & ~ROW_MASKS[0] & ~COLUMN_MASKS[7]; // capture left
         addPawnMoves(moveList, pawnMoves, 1, 1);
 
-        pawnMoves = (WP >> 8) & empty & ~rowMasks8[0]; // move 1 up
+        pawnMoves = (WP >> 8) & empty & ~ROW_MASKS[0]; // move 1 up
         addPawnMoves(moveList, pawnMoves, 1, 0);
 
-        pawnMoves = (WP >> 16) & empty & (empty >> 8) & rowMasks8[4]; // move 2 up
+        pawnMoves = (WP >> 16) & empty & (empty >> 8) & ROW_MASKS[4]; // move 2 up
         addPawnMoves(moveList, pawnMoves, 2, 0);
 
         // promotion: y1, y2, promotion, 'P'
 
-        pawnMoves = (WP >> 7) & notMyPieces & occupied & rowMasks8[0] & ~columnMasks8[0]; // capture right
+        pawnMoves = (WP >> 7) & notMyPieces & occupied & ROW_MASKS[0] & ~COLUMN_MASKS[0]; // capture right
         addPromotion(moveList, pawnMoves, 1, -1, true);
 
-        pawnMoves = (WP >> 9) & notMyPieces & occupied & rowMasks8[0] & ~columnMasks8[7]; // capture left
+        pawnMoves = (WP >> 9) & notMyPieces & occupied & ROW_MASKS[0] & ~COLUMN_MASKS[7]; // capture left
         addPromotion(moveList, pawnMoves, 1, 1, true);
 
-        pawnMoves = (WP >> 8) & notMyPieces & empty & rowMasks8[0]; // move 1 up
+        pawnMoves = (WP >> 8) & notMyPieces & empty & ROW_MASKS[0]; // move 1 up
         addPromotion(moveList, pawnMoves, 1, 0, true);
 
         // el passant: y1, y2, Space, 'E'
 
         // right
-        pawnMoves = (WP << 1) & BP & rowMasks8[3] & ~columnMasks8[0] & EP;
+        pawnMoves = (WP << 1) & BP & ROW_MASKS[3] & ~COLUMN_MASKS[0] & EP;
         if (pawnMoves != 0) {
             int i = Long.numberOfTrailingZeros(pawnMoves);
             moveList.add(new Move(3, i % 8 - 1, 2, i % 8, EN_PASSANT));
         }
         // left
-        pawnMoves = (WP >> 1) & BP & rowMasks8[3] & ~columnMasks8[7] & EP;
+        pawnMoves = (WP >> 1) & BP & ROW_MASKS[3] & ~COLUMN_MASKS[7] & EP;
         if (pawnMoves != 0) {
             int i = Long.numberOfTrailingZeros(pawnMoves);
             moveList.add(new Move(3, i % 8 + 1, 2, i % 8, EN_PASSANT));
@@ -304,39 +305,39 @@ public class MoveGenerator {
 
     private static void possibleBP(List<Move> moveList, long BP, long WP, long EP) {
 
-        long pawnMoves = (BP << 7) & notMyPieces & occupied & ~rowMasks8[7] & ~columnMasks8[7]; // capture right
+        long pawnMoves = (BP << 7) & notMyPieces & occupied & ~ROW_MASKS[7] & ~COLUMN_MASKS[7]; // capture right
         addPawnMoves(moveList, pawnMoves, -1, 1);
 
-        pawnMoves = (BP << 9) & notMyPieces & occupied & ~rowMasks8[7] & ~columnMasks8[0]; // capture left
+        pawnMoves = (BP << 9) & notMyPieces & occupied & ~ROW_MASKS[7] & ~COLUMN_MASKS[0]; // capture left
         addPawnMoves(moveList, pawnMoves, -1, -1);
 
-        pawnMoves = (BP << 8) & empty & ~rowMasks8[7]; // move 1 up
+        pawnMoves = (BP << 8) & empty & ~ROW_MASKS[7]; // move 1 up
         addPawnMoves(moveList, pawnMoves, -1, 0);
 
-        pawnMoves = (BP << 16) & empty & (empty << 8) & rowMasks8[3]; // move 2 up
+        pawnMoves = (BP << 16) & empty & (empty << 8) & ROW_MASKS[3]; // move 2 up
         addPawnMoves(moveList, pawnMoves, -2, 0);
 
         // promotion
 
-        pawnMoves = (BP << 7) & notMyPieces & occupied & rowMasks8[7] & ~columnMasks8[7]; // capture right
+        pawnMoves = (BP << 7) & notMyPieces & occupied & ROW_MASKS[7] & ~COLUMN_MASKS[7]; // capture right
         addPromotion(moveList, pawnMoves, -1, 1, false);
 
-        pawnMoves = (BP << 9) & notMyPieces & occupied & rowMasks8[7] & ~columnMasks8[0]; // capture left
+        pawnMoves = (BP << 9) & notMyPieces & occupied & ROW_MASKS[7] & ~COLUMN_MASKS[0]; // capture left
         addPromotion(moveList, pawnMoves, -1, -1, false);
 
-        pawnMoves = (BP << 8) & notMyPieces & empty & rowMasks8[7]; // move 1 up
+        pawnMoves = (BP << 8) & notMyPieces & empty & ROW_MASKS[7]; // move 1 up
         addPromotion(moveList, pawnMoves, -1, 0, false);
 
         // el passant
 
         // right
-        pawnMoves = (BP >> 1) & WP & rowMasks8[4] & ~columnMasks8[7] & EP;
+        pawnMoves = (BP >> 1) & WP & ROW_MASKS[4] & ~COLUMN_MASKS[7] & EP;
         if (pawnMoves != 0) {
             int i = Long.numberOfTrailingZeros(pawnMoves);
             moveList.add(new Move(4, i % 8 + 1, 5, i % 8, EN_PASSANT));
         }
         // left
-        pawnMoves = (BP << 1) & WP & rowMasks8[4] & ~columnMasks8[0] & EP;
+        pawnMoves = (BP << 1) & WP & ROW_MASKS[4] & ~COLUMN_MASKS[0] & EP;
         if (pawnMoves != 0) {
             int i = Long.numberOfTrailingZeros(pawnMoves);
             moveList.add(new Move(4, i % 8 - 1, 5, i % 8, EN_PASSANT));
@@ -504,24 +505,24 @@ public class MoveGenerator {
         long binaryPiece = 1L << position;
         long movesHorizontal = (occupied - 2 * binaryPiece) ^
                 Long.reverse(Long.reverse(occupied) - 2 * Long.reverse(binaryPiece));
-        long movesVertical = ((occupied & columnMasks8[col]) - 2 * binaryPiece) ^
-                Long.reverse(Long.reverse(occupied & columnMasks8[col]) -
+        long movesVertical = ((occupied & COLUMN_MASKS[col]) - 2 * binaryPiece) ^
+                Long.reverse(Long.reverse(occupied & COLUMN_MASKS[col]) -
                         (2 * Long.reverse(binaryPiece)));
-        return (movesHorizontal & rowMasks8[row]) | (movesVertical & columnMasks8[col]);
+        return (movesHorizontal & ROW_MASKS[row]) | (movesVertical & COLUMN_MASKS[col]);
     }
 
     static long diagonalMoves(int position) {
         int checkPos = position / 8 + position % 8;
         long binaryPiece = 1L << position;
-        long movesDiagonal = ((occupied & DiagonalMasks8[checkPos]) - (2 * binaryPiece)) ^
-                Long.reverse(Long.reverse(occupied & DiagonalMasks8[checkPos]) -
+        long movesDiagonal = ((occupied & DIAGONAL_MASKS[checkPos]) - (2 * binaryPiece)) ^
+                Long.reverse(Long.reverse(occupied & DIAGONAL_MASKS[checkPos]) -
                         (2 * Long.reverse(binaryPiece)));
         int checkPos2 = position / 8 + 7 - position % 8;
-        long movesAntiDiagonal = ((occupied & AntiDiagonalMasks8[checkPos2]) - (2 * binaryPiece)) ^
-                Long.reverse(Long.reverse(occupied & AntiDiagonalMasks8[checkPos2]) -
+        long movesAntiDiagonal = ((occupied & ANTI_DIAGONAL_MASKS[checkPos2]) - (2 * binaryPiece)) ^
+                Long.reverse(Long.reverse(occupied & ANTI_DIAGONAL_MASKS[checkPos2]) -
                         (2 * Long.reverse(binaryPiece)));
-        return (movesDiagonal & DiagonalMasks8[checkPos]) |
-                (movesAntiDiagonal & AntiDiagonalMasks8[checkPos2]);
+        return (movesDiagonal & DIAGONAL_MASKS[checkPos]) |
+                (movesAntiDiagonal & ANTI_DIAGONAL_MASKS[checkPos2]);
     }
 
 
@@ -584,8 +585,8 @@ public class MoveGenerator {
      */
     public static long unsafeForBlack(long[] pieces) {
         // pawn
-        long unsafe = (pieces[WP] >> 7) & ~columnMasks8[0]; // left
-        unsafe |= (pieces[WP] >> 9) & ~columnMasks8[7]; // right
+        long unsafe = (pieces[WP] >> 7) & ~COLUMN_MASKS[0]; // left
+        unsafe |= (pieces[WP] >> 9) & ~COLUMN_MASKS[7]; // right
 
         // rest
         unsafe |= isSafe(pieces, -6);
@@ -599,8 +600,8 @@ public class MoveGenerator {
      */
     private static long unsafeForWhite(long[] pieces) {
         // pawn
-        long unsafe = (pieces[BP] << 7) & ~columnMasks8[7]; // left
-        unsafe |= (pieces[BP] << 9) & ~columnMasks8[0]; // right
+        long unsafe = (pieces[BP] << 7) & ~COLUMN_MASKS[7]; // left
+        unsafe |= (pieces[BP] << 9) & ~COLUMN_MASKS[0]; // right
 
         // rest
         unsafe |= isSafe(pieces, 0);

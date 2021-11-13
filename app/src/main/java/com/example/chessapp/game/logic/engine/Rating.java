@@ -1,7 +1,9 @@
 package com.example.chessapp.game.logic.engine;
 
 import static com.example.chessapp.game.type.BitBoards.BP;
+import static com.example.chessapp.game.type.BitBoards.BQ;
 import static com.example.chessapp.game.type.BitBoards.WP;
+import static com.example.chessapp.game.type.BitBoards.WQ;
 import static com.example.chessapp.game.type.MoveType.EN_PASSANT;
 
 import com.example.chessapp.game.logic.MoveGenerator;
@@ -9,15 +11,46 @@ import com.example.chessapp.game.type.Move;
 
 public class Rating {
 
+    private static final long[] ISOLATED_PAWN_MASKS;
+    private static final long[][] WHITE_PASSED_PAWN_MASKS;
+    private static final long[][] BLACK_PASSED_PAWN_MASKS;
+
+    static {
+        ISOLATED_PAWN_MASKS = new long[8];
+        for (int i = 0; i < 8; i++) {
+            long mask = 0L;
+            if (i > 0)
+                mask |= MoveGenerator.COLUMN_MASKS[i - 1];
+            if (i < 7)
+                mask |= MoveGenerator.COLUMN_MASKS[i + 1];
+            ISOLATED_PAWN_MASKS[i] = mask;
+        }
+
+        WHITE_PASSED_PAWN_MASKS = new long[8][8];
+        BLACK_PASSED_PAWN_MASKS = new long[8][8];
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                long mask = ISOLATED_PAWN_MASKS[j] | MoveGenerator.COLUMN_MASKS[j];
+                for (int k = i; k < 8; k++)
+                    mask &= ~MoveGenerator.ROW_MASKS[k];
+                WHITE_PASSED_PAWN_MASKS[i][j] = mask;
+
+                mask = ISOLATED_PAWN_MASKS[j] | MoveGenerator.COLUMN_MASKS[j];
+                for (int k = 0; k <= i; k++)
+                    mask &= ~MoveGenerator.ROW_MASKS[k];
+                BLACK_PASSED_PAWN_MASKS[i][j] = mask;
+            }
+        }
+    }
+
     public int scoreMove(Move move, long[] boards, long opponentPieces, int ply) {
         if (move.type == EN_PASSANT)
-            return mvv_lva[WP][BP];
+            return MVV_LVA[WP][BP];
 
         if (MoveGenerator.captureMove(move, opponentPieces)) {
             MoveGenerator.getPieces(move, boards);
-            return mvv_lva[MoveGenerator.startPiece][MoveGenerator.targetPiece] + 10000;
-        }
-        else {
+            return MVV_LVA[MoveGenerator.startPiece][MoveGenerator.targetPiece] + 10000;
+        } else {
             if (killerMoves[0][ply] != null && killerMoves[0][ply].equals(move)) {
                 return 9000;
             } else if (killerMoves[1][ply] != null && killerMoves[1][ply].equals(move)) {
@@ -33,27 +66,35 @@ public class Rating {
     public int evaluate(long[] boards, boolean white) {
         int score = 0;
 
+        // white
         for (int i = 0; i < 6; i++) {
             long board = boards[i];
             long piece = board & -board; // &(board-1)
             while (piece != 0) {
-                score += pieceScores[i];
+                score += PIECE_SCORES[i];
                 int j = Long.numberOfTrailingZeros(piece);
-                if (i != 4)
-                    score += piecePositionScores[i][j];
+                if (i != WQ) // not queen
+                    score += PIECE_POSITION_SCORES[i][j];
+                if (i == WP)
+                    score += scorePawnStructure(j, boards[WP], boards[BP], true);
+
                 board &= ~piece;
                 piece = board & -board; // &(WP-1)
             }
         }
 
+        // black
         for (int i = 6; i < 12; i++) {
             long board = boards[i];
             long piece = board & -board; // &(board-1)
             while (piece != 0) {
-                score += pieceScores[i];
+                score += PIECE_SCORES[i];
                 int j = Long.numberOfTrailingZeros(piece);
-                if (i != 10)
-                    score -= piecePositionScores[i - 6][mirror(j)];
+                if (i != BQ) // not queen
+                    score -= PIECE_POSITION_SCORES[i - 6][mirror(j)];
+                if (i == BP)
+                    score -= scorePawnStructure(j, boards[BP], boards[WP], false);
+
                 board &= ~piece;
                 piece = board & -board; // &(WP-1)
             }
@@ -62,8 +103,31 @@ public class Rating {
         return white ? score : -score;
     }
 
+    private int scorePawnStructure(int location, long pawns, long opponentPawns, boolean white) {
+        int score = 0;
+        int row = location / 8, col = location % 8;
+
+        // doubled
+        int doublePawns = Long.bitCount(pawns & MoveGenerator.COLUMN_MASKS[col]);
+        if (doublePawns > 1)
+            score += doublePawns * DOUBLE_PAWN_PENALTY;
+
+        // isolated
+        if ((pawns & ISOLATED_PAWN_MASKS[col]) == 0) {
+            score += ISOLATED_PAWN_PENALTY;
+        }
+
+        // passed
+        long[][] mask = white ? WHITE_PASSED_PAWN_MASKS : BLACK_PASSED_PAWN_MASKS;
+        if ((opponentPawns & mask[row][col]) == 0) {
+            score += PASSED_PAWN_BONUS[white ? row : 7 - row];
+        }
+
+        return score;
+    }
+
     private int mirror(int position) {
-        return (7 - position / 8) * 8 + position % 8;
+        return 63 - position;
     }
 
     /*
@@ -78,7 +142,7 @@ public class Rating {
     */
 
     // [attacker][victim]
-    private final int[][] mvv_lva = {
+    private static final int[][] MVV_LVA = {
             {105, 205, 305, 405, 505, 605, 105, 205, 305, 405, 505, 605},
             {104, 204, 304, 404, 504, 604, 104, 204, 304, 404, 504, 604},
             {103, 203, 303, 403, 503, 603, 103, 203, 303, 403, 503, 603},
@@ -99,7 +163,7 @@ public class Rating {
     public int[][] historyMoves;
 
     // pawn positional score
-    private final int[] pawn_score =
+    private static final int[] PAWN_SCORE =
             {
                     90, 90, 90, 90, 90, 90, 90, 90,
                     30, 30, 30, 40, 40, 30, 30, 30,
@@ -112,7 +176,7 @@ public class Rating {
             };
 
     // knight positional score
-    private final int[] knight_score =
+    private static final int[] KNIGHT_SCORE =
             {
                     -5, 0, 0, 0, 0, 0, 0, -5,
                     -5, 0, 0, 10, 10, 0, 0, -5,
@@ -125,7 +189,7 @@ public class Rating {
             };
 
     // bishop positional score
-    private final int[] bishop_score =
+    private static final int[] BISHOP_SCORE =
             {
                     0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0,
@@ -139,7 +203,7 @@ public class Rating {
             };
 
     // rook positional score
-    private final int[] rook_score =
+    private static final int[] ROOK_SCORE =
             {
                     50, 50, 50, 50, 50, 50, 50, 50,
                     50, 50, 50, 50, 50, 50, 50, 50,
@@ -153,7 +217,7 @@ public class Rating {
             };
 
     // king positional score
-    private final int[] king_score =
+    private static final int[] KING_SCORE =
             {
                     0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 5, 5, 5, 5, 0, 0,
@@ -165,17 +229,21 @@ public class Rating {
                     0, 0, 5, 0, -15, 0, 10, 0
             };
 
-    private final int[] pieceScores = {
+    private static final int[] PIECE_SCORES = {
             100, 300, 350, 500, 900, 10_000,
             -100, -300, -350, -500, -900, -10_000
     };
 
-    private final int[][] piecePositionScores = {
-            pawn_score,
-            knight_score,
-            bishop_score,
-            rook_score,
+    private static final int[][] PIECE_POSITION_SCORES = {
+            PAWN_SCORE,
+            KNIGHT_SCORE,
+            BISHOP_SCORE,
+            ROOK_SCORE,
             {},
-            king_score
+            KING_SCORE
     };
+
+    private final static int DOUBLE_PAWN_PENALTY = -10;
+    private final static int ISOLATED_PAWN_PENALTY = -10;
+    private final static int[] PASSED_PAWN_BONUS = {0, 10, 30, 50, 75, 150, 200};
 }

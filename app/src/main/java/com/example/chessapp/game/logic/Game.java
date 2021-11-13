@@ -45,16 +45,19 @@ public class Game {
     private final char[][] chessBoard;
     private long[] boards = {0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,};
     private boolean[] castleFlags = {true, true, true, true};
-    public List<Move> moveHistory = new ArrayList<>();
+    private long hashKey;
+    private final List<Move> moveHistory = new ArrayList<>();
 
     public Game(GameFragment gameFragment, char[][] chessBoard, boolean white) {
         this.gameFragment = gameFragment;
         this.chessBoard = chessBoard;
         arrayToBitboards();
         engine = new Engine();
+        hashKey = engine.zobrist.generateHashKey(boards, castleFlags, true);
     }
 
     public void makeRealMove(Move move) {
+        hashKey = engine.zobrist.hashMove(hashKey, move, boards, castleFlags, gameFragment.whiteTurn);
         boolean capture = capture(move.endRow, move.endCol); // for sound playing
         castleFlags = MoveGenerator.updateCastling(move, boards, castleFlags);
         boards = MoveGenerator.makeMove(move, boards);
@@ -79,7 +82,7 @@ public class Game {
     }
 
     public void response(boolean white) {
-        int score = engine.findBestMove(boards, castleFlags, white);
+        int score = engine.findBestMove(boards, castleFlags, white, hashKey);
         score = white ? score : -score;
         Move move = engine.bestMove;
 

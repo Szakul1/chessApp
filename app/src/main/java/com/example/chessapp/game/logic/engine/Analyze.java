@@ -35,7 +35,7 @@ public class Analyze {
 
         for (int i = 0; i < moves.size(); i++) {
             Move move = moves.get(i);
-            int score = engine.findBestMove(boards, castleFlags, white);
+            int score = engine.findBestMove(boards, castleFlags, white, 0L);// TODO change
             score = white ? score : -score;
             bestMoves[i] = engine.bestMove.toString();
             bestScores[i] = score;
