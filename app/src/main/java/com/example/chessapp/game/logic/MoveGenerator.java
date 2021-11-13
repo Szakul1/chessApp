@@ -43,14 +43,14 @@ public class MoveGenerator {
     public static final long[] ROW_MASKS = /* from row1 to row8 */
             {0xFFL, 0xFF00L, 0xFF0000L, 0xFF000000L, 0xFF00000000L, 0xFF0000000000L, 0xFF000000000000L,
                     0xFF00000000000000L};
-    public static  final long[] COLUMN_MASKS = /* from columnA to columnH */
+    public static final long[] COLUMN_MASKS = /* from columnA to columnH */
             {0x101010101010101L, 0x202020202020202L, 0x404040404040404L, 0x808080808080808L, 0x1010101010101010L,
                     0x2020202020202020L, 0x4040404040404040L, 0x8080808080808080L};
-    private static  final long[] DIAGONAL_MASKS = /* from top left to bottom right */
+    private static final long[] DIAGONAL_MASKS = /* from top left to bottom right */
             {0x1L, 0x102L, 0x10204L, 0x1020408L, 0x102040810L, 0x10204081020L, 0x1020408102040L, 0x102040810204080L,
                     0x204081020408000L, 0x408102040800000L, 0x810204080000000L, 0x1020408000000000L,
                     0x2040800000000000L, 0x4080000000000000L, 0x8000000000000000L};
-    private static  final long[] ANTI_DIAGONAL_MASKS = /* from top right to bottom left */
+    private static final long[] ANTI_DIAGONAL_MASKS = /* from top right to bottom left */
             {0x80L, 0x8040L, 0x804020L, 0x80402010L, 0x8040201008L, 0x804020100804L, 0x80402010080402L,
                     0x8040201008040201L, 0x4020100804020100L, 0x2010080402010000L, 0x1008040201000000L,
                     0x804020100000000L, 0x402010000000000L, 0x201000000000000L, 0x100000000000000L};
@@ -133,7 +133,8 @@ public class MoveGenerator {
 
     /**
      * Assigns moving piece to startPiece and target piece to targetPiece
-     * @param move move
+     *
+     * @param move   move
      * @param boards bit boards
      */
     public static void getPieces(Move move, long[] boards) {
@@ -151,7 +152,8 @@ public class MoveGenerator {
 
     /**
      * Checks if move is capture
-     * @param move move
+     *
+     * @param move           move
      * @param opponentPieces bitboards of opponent pieces
      * @return true if capture
      */
@@ -162,6 +164,7 @@ public class MoveGenerator {
 
     /**
      * Returns occupied squares
+     *
      * @param pieces pieces
      * @return occupied bitboard
      */
@@ -223,6 +226,22 @@ public class MoveGenerator {
     public static boolean isDoublePush(Move move, long board) {
         int start = move.startRow * 8 + move.startCol;
         return (Math.abs(move.startRow - move.endRow) == 2) && (((board >> start) & 1) == 1);
+    }
+
+    public static long getKingMoves(long KBoard) {
+        int location = Long.numberOfTrailingZeros(KBoard); // location of king
+        // 9 - location of king with all possible moves at most left bottom position
+        long moves = location > 9 ?
+                KING_SPAN << (location - 9) : // move forward
+                KING_SPAN >> (9 - location); // move back
+        moves = location % 8 < 4 ? // check bounds but no pieces
+                moves & ~columnGH :
+                moves & ~columnAB;
+        return moves;
+    }
+
+    public static long getAttackedSquares(long[] pieces, boolean white) {
+        return white ? unsafeForBlack(pieces) : unsafeForWhite(pieces);
     }
 
     private static List<Move> possibleMovesW(long[] pieces, boolean CWK, boolean CWQ) {
@@ -361,10 +380,11 @@ public class MoveGenerator {
 
     /**
      * Adds pawn moves to list
-     * @param moveList list to add
+     *
+     * @param moveList  list to add
      * @param pawnMoves moves bitboard
-     * @param addRow offset to get starting row
-     * @param addCol offset to get starting col
+     * @param addRow    offset to get starting row
+     * @param addCol    offset to get starting col
      */
     private static void addPawnMoves(List<Move> moveList, long pawnMoves, int addRow, int addCol) {
         long pawn = pawnMoves & -pawnMoves; // get fir pawn
@@ -379,8 +399,9 @@ public class MoveGenerator {
 
     /**
      * Adds move for bishop to list
+     *
      * @param moveList list ot add
-     * @param BBoard bishop bitboard
+     * @param BBoard   bishop bitboard
      */
     private static void possibleB(List<Move> moveList, long BBoard) {
         getSlidingMoves(moveList, BBoard, MoveGenerator::diagonalMoves);
@@ -388,8 +409,9 @@ public class MoveGenerator {
 
     /**
      * Adds move for rook to list
+     *
      * @param moveList list ot add
-     * @param RBoard rook bitboard
+     * @param RBoard   rook bitboard
      */
     private static void possibleR(List<Move> moveList, long RBoard) {
         getSlidingMoves(moveList, RBoard, MoveGenerator::straightMoves);
@@ -397,8 +419,9 @@ public class MoveGenerator {
 
     /**
      * Adds move for queen to list
+     *
      * @param moveList list ot add
-     * @param QBoard queen bitboard
+     * @param QBoard   queen bitboard
      */
     private static void possibleQ(List<Move> moveList, long QBoard) {
         getSlidingMoves(moveList, QBoard, MoveGenerator::getQueenMoves);
@@ -406,6 +429,7 @@ public class MoveGenerator {
 
     /**
      * Returns moves for queen
+     *
      * @param position position of queen
      * @return bitboard of moves
      */
@@ -422,8 +446,9 @@ public class MoveGenerator {
 
     /**
      * Adds moves to list for sliding pieces
+     *
      * @param moveList list ot add
-     * @param board bitboard of piece
+     * @param board    bitboard of piece
      * @param getMoves function for getting moves for different pieces
      */
     private static void getSlidingMoves(List<Move> moveList, long board, GetMoves getMoves) {
@@ -440,10 +465,11 @@ public class MoveGenerator {
 
     /**
      * Adds possible moves for knight to list
+     *
      * @param moveList list to add
-     * @param KBoard bitboard of kings
+     * @param KBoard   bitboard of kings
      */
-    public static void possibleK(List<Move> moveList, long KBoard) {
+    private static void possibleK(List<Move> moveList, long KBoard) {
         int location = Long.numberOfTrailingZeros(KBoard); // location of king
         // 9 - location of king with all possible moves at most left bottom position
         long moves = location > 9 ?
@@ -454,10 +480,11 @@ public class MoveGenerator {
 
     /**
      * Adds possible moves for knight to list
+     *
      * @param moveList list to add
-     * @param NBoard bitboard of knights
+     * @param NBoard   bitboard of knights
      */
-    public static void possibleN(List<Move> moveList, long NBoard) {
+    private static void possibleN(List<Move> moveList, long NBoard) {
         long knight = NBoard & -NBoard; // get first knight -b = ~(pawnMoves-1)
         while (knight != 0) { // until no more knights
             int location = Long.numberOfTrailingZeros(knight); // location of knight
@@ -473,9 +500,10 @@ public class MoveGenerator {
 
     /**
      * Checks if move is out of board for king and knight and calls addMove
+     *
      * @param moveList list to add moves
      * @param location starting location
-     * @param moves bitboard of moves
+     * @param moves    bitboard of moves
      */
     private static void checkArrayOut(List<Move> moveList, int location, long moves) {
         moves = location % 8 < 4 ?
@@ -486,9 +514,10 @@ public class MoveGenerator {
 
     /**
      * Creates moves from bitboard and adds to list
+     *
      * @param moveList list to add
      * @param location starting location
-     * @param moves bitboard of possible moves
+     * @param moves    bitboard of possible moves
      */
     private static void addMove(List<Move> moveList, int location, long moves) {
         long move = moves & -moves;
@@ -529,12 +558,13 @@ public class MoveGenerator {
     /**
      * Adds possible castle moves for white to list
      * checks castle flags, rook in place
-     * @param moves list to add
+     *
+     * @param moves    list to add
      * @param castleWK able to castle white king
      * @param castleWQ able to castle white queen
-     * @param unsafe unsafe squares
-     * @param king king bitboard
-     * @param rook rook bitboard
+     * @param unsafe   unsafe squares
+     * @param king     king bitboard
+     * @param rook     rook bitboard
      */
     private static void possibleCW(List<Move> moves, boolean castleWK, boolean castleWQ, long unsafe, long king, long rook) {
         if ((unsafe & king) == 0) { // not in check
@@ -555,12 +585,13 @@ public class MoveGenerator {
     /**
      * Adds possible castle moves for black to list
      * checks castle flags, rook in place
-     * @param moves list to add
+     *
+     * @param moves    list to add
      * @param castleBK able to castle black king
      * @param castleBQ able to castle black queen
-     * @param unsafe unsafe squares
-     * @param king king bitboard
-     * @param rook rook bitboard
+     * @param unsafe   unsafe squares
+     * @param king     king bitboard
+     * @param rook     rook bitboard
      */
     private static void possibleCB(List<Move> moves, boolean castleBK, boolean castleBQ, long unsafe, long king, long rook) {
         if ((unsafe & king) == 0) { // not in check
@@ -580,6 +611,7 @@ public class MoveGenerator {
 
     /**
      * Returns unsafe squares for black
+     *
      * @param pieces pieces
      * @return unsafe squares bitboard
      */
@@ -595,6 +627,7 @@ public class MoveGenerator {
 
     /**
      * Returns unsafe squares for white
+     *
      * @param pieces pieces
      * @return unsafe squares bitboard
      */
@@ -610,6 +643,7 @@ public class MoveGenerator {
 
     /**
      * Returns squares attacked by player without pawns
+     *
      * @param pieces pieces
      * @param offset 0 - for white, -6 for black to get pieces from array
      * @return attacked pieces bitboard

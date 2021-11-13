@@ -1,9 +1,15 @@
 package com.example.chessapp.game.logic.engine;
 
+import static com.example.chessapp.game.type.BitBoards.BB;
+import static com.example.chessapp.game.type.BitBoards.BK;
 import static com.example.chessapp.game.type.BitBoards.BP;
 import static com.example.chessapp.game.type.BitBoards.BQ;
+import static com.example.chessapp.game.type.BitBoards.BR;
+import static com.example.chessapp.game.type.BitBoards.WB;
+import static com.example.chessapp.game.type.BitBoards.WK;
 import static com.example.chessapp.game.type.BitBoards.WP;
 import static com.example.chessapp.game.type.BitBoards.WQ;
+import static com.example.chessapp.game.type.BitBoards.WR;
 import static com.example.chessapp.game.type.MoveType.EN_PASSANT;
 
 import com.example.chessapp.game.logic.MoveGenerator;
@@ -75,11 +81,20 @@ public class Rating {
                 int j = Long.numberOfTrailingZeros(piece);
                 if (i != WQ) // not queen
                     score += PIECE_POSITION_SCORES[i][j];
+
                 if (i == WP)
                     score += scorePawnStructure(j, boards[WP], boards[BP], true);
+                else if (i == WR)
+                    score += scoreOpenPosition(boards[WP], boards[BP], j);
+                else if (i == WK) {
+                    // penalty for open king
+                    score -= scoreOpenPosition(boards[WP], boards[BP], j);
+                    score += Long.bitCount(MoveGenerator.getKingMoves(boards[WK]) & MoveGenerator.getMyPieces(true, boards))
+                            * KING_SHIELD_BONUS;
+                }
 
                 board &= ~piece;
-                piece = board & -board; // &(WP-1)
+                piece = board & -board;
             }
         }
 
@@ -92,15 +107,45 @@ public class Rating {
                 int j = Long.numberOfTrailingZeros(piece);
                 if (i != BQ) // not queen
                     score -= PIECE_POSITION_SCORES[i - 6][mirror(j)];
+
                 if (i == BP)
                     score -= scorePawnStructure(j, boards[BP], boards[WP], false);
+                else if (i == BR)
+                    score -= scoreOpenPosition(boards[BP], boards[WP], j);
+                else if (i == BK) {
+                    // penalty for open king
+                    score += scoreOpenPosition(boards[BP], boards[WP], j);
+                    score -= Long.bitCount(MoveGenerator.getKingMoves(boards[BK]) & MoveGenerator.getMyPieces(false, boards))
+                            * KING_SHIELD_BONUS;
+                }
 
                 board &= ~piece;
-                piece = board & -board; // &(WP-1)
+                piece = board & -board;
             }
         }
 
+        // score for attacked squares
+        score += Long.bitCount(MoveGenerator.getAttackedSquares(boards, true));
+        score -= Long.bitCount(MoveGenerator.getAttackedSquares(boards, false));
+
+        // bishop pair
+        if (Long.bitCount(boards[WB]) > 1)
+            score += BISHOP_PAIR_BONUS;
+        if (Long.bitCount(boards[BB]) > 1)
+            score -= BISHOP_PAIR_BONUS;
+
         return white ? score : -score;
+    }
+
+    private int scoreOpenPosition(long pawns, long opponentPawns, int location) {
+        int score = 0;
+        int col = location % 8;
+        if ((pawns & MoveGenerator.COLUMN_MASKS[col]) == 0)
+            score += SEMI_OPEN_FILE_SCORE;
+        if (((pawns | opponentPawns) & MoveGenerator.COLUMN_MASKS[col]) == 0)
+            score += OPEN_FILE_SCORE;
+
+        return score;
     }
 
     private int scorePawnStructure(int location, long pawns, long opponentPawns, boolean white) {
@@ -246,4 +291,11 @@ public class Rating {
     private final static int DOUBLE_PAWN_PENALTY = -10;
     private final static int ISOLATED_PAWN_PENALTY = -10;
     private final static int[] PASSED_PAWN_BONUS = {0, 10, 30, 50, 75, 150, 200};
+
+    private final static int SEMI_OPEN_FILE_SCORE = 10;
+    private final static int OPEN_FILE_SCORE = 15;
+
+    private final static int KING_SHIELD_BONUS = 5;
+
+    private final static int BISHOP_PAIR_BONUS = 20;
 }

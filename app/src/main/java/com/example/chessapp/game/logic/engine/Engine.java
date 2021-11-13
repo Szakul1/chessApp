@@ -20,9 +20,9 @@ public class Engine {
     private final static int INFINITY = 50000;
     private static final int FULL_DEPTH_MOVES = 4;
     private static final int REDUCTION_LIMIT = 3;
-    private static final int MAX_PLY = 64;
+    private static final int MAX_PLY = 32;
 
-    public static int globalDepth = 8;
+    public static int globalDepth = 6;
     private final Rating rating;
     public Move bestMove;
     public int mate = -1;
@@ -98,7 +98,7 @@ public class Engine {
         HashFlag hashFlag = ALPHA;
 
         // check if node is already stored in transposition table
-        if (transpositionTable.containsKey(hashKey)) {
+        if (ply != 0 && transpositionTable.containsKey(hashKey)) {
             Integer value = Objects.requireNonNull(transpositionTable.get(hashKey)).readEntry(alpha, beta, depth, ply);
             if (value != null) {
                 return value;
@@ -107,11 +107,14 @@ public class Engine {
 
         nodes++;
         if (depth == 0) {
-            return rating.evaluate(boards, white);
+            return quiescence(alpha, beta, boards, castleFlags, white, ply);
         }
+        if (ply > MAX_PLY - 1)
+            return rating.evaluate(boards, white);
+
         boolean kingSafe = MoveGenerator.kingSafe(white, boards);
-//        if (!kingSafe)
-//            depth++;
+        if (!kingSafe)
+            depth++;
 
         // null move
         if (possibleNullMove && depth >= 4 && kingSafe && ply != 0) {
@@ -193,6 +196,48 @@ public class Engine {
         }
 
         transpositionTable.put(hashKey, new TranspositionTable(depth, hashFlag, alpha, ply));
+
+        return alpha;
+    }
+
+    private int quiescence(int alpha, int beta, long[] boards, boolean[] castleFlags, boolean white, int ply) {
+        int score = rating.evaluate(boards, white);
+        if (ply > MAX_PLY - 1)
+            return score;
+
+        if (score >= beta) {
+            return beta;
+        }
+        if (score > alpha) {
+            alpha = score;
+        }
+
+        nodes++;
+        List<Move> moves = MoveGenerator.possibleMoves(white, boards, castleFlags);
+
+        long opponentPieces = MoveGenerator.getMyPieces(!white, boards);
+        int[] scores = scoreMoves(moves, boards, opponentPieces, ply);
+
+        for (int i = 0; i < moves.size(); i++) {
+            pickMove(i, moves, scores);
+            Move move = moves.get(i);
+
+            if (!MoveGenerator.captureMove(move, opponentPieces)) // only captures
+                continue;
+
+            long[] nextBoards = MoveGenerator.makeMove(move, boards);
+            boolean[] nextFlags = MoveGenerator.updateCastling(move, boards, castleFlags);
+
+            score = -quiescence(-beta, -alpha, nextBoards, nextFlags, !white, ply + 1);
+
+            if (score > alpha) {
+                alpha = score;
+
+                if (score >= beta) {
+                    return beta;
+                }
+            }
+        }
 
         return alpha;
     }
