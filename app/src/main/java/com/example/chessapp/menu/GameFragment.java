@@ -108,7 +108,7 @@ public class GameFragment extends Fragment {
         analyzing = false;
         finishedGame = null;
         moves = new ArrayList<>();
-        game = new Game(this, chessBoard, color);
+        game = new Game(this, chessBoard);
         analyzeDesk = new AnalyzeDesk(this, requireView());
         dialogManager = new DialogManager(this, requireActivity());
         if (!color) {

@@ -26,7 +26,7 @@ public class Analyze {
     }
 
     public void analyzeGame(List<Move> moves, long[] boards, boolean[] castleFlags, boolean white,
-                            ProgressBar bar) {
+                            ProgressBar bar, long hashKey) {
         bar.setMax(moves.size());
         this.moves = moves;
         moveScores = new int[moves.size()];
@@ -35,15 +35,16 @@ public class Analyze {
 
         for (int i = 0; i < moves.size(); i++) {
             Move move = moves.get(i);
-            int score = engine.findBestMove(boards, castleFlags, white, 0L);// TODO change
+            int score = engine.findBestMove(boards, castleFlags, white, hashKey);
             score = white ? score : -score;
             bestMoves[i] = engine.bestMove.toString();
             bestScores[i] = score;
+            hashKey = engine.zobrist.hashMove(hashKey, move, boards, castleFlags, white);
             castleFlags = MoveGenerator.updateCastling(move, boards, castleFlags);
             boards = MoveGenerator.makeMove(move, boards);
 
             white = !white;
-            score = engine.scoreMove(boards, castleFlags, white);
+            score = engine.findBestMove(boards, castleFlags, white, hashKey);
             score = white ? score : -score;
             moveScores[i] = score;
             bar.setProgress(i);

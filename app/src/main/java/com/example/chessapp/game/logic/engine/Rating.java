@@ -10,6 +10,9 @@ import static com.example.chessapp.game.type.BitBoards.WK;
 import static com.example.chessapp.game.type.BitBoards.WP;
 import static com.example.chessapp.game.type.BitBoards.WQ;
 import static com.example.chessapp.game.type.BitBoards.WR;
+import static com.example.chessapp.game.type.BitBoards.startPiece;
+import static com.example.chessapp.game.type.BitBoards.targetPiece;
+import static com.example.chessapp.game.type.BitBoards.targetSquare;
 import static com.example.chessapp.game.type.MoveType.EN_PASSANT;
 
 import com.example.chessapp.game.logic.MoveGenerator;
@@ -54,16 +57,16 @@ public class Rating {
             return MVV_LVA[WP][BP];
 
         if (MoveGenerator.captureMove(move, opponentPieces)) {
-            MoveGenerator.getPieces(move, boards);
-            return MVV_LVA[MoveGenerator.startPiece][MoveGenerator.targetPiece] + 10000;
+            int[] cords = MoveGenerator.getPieces(move, boards);
+            return MVV_LVA[cords[startPiece]][cords[targetPiece]] + 10_000;
         } else {
             if (killerMoves[0][ply] != null && killerMoves[0][ply].equals(move)) {
                 return 9000;
             } else if (killerMoves[1][ply] != null && killerMoves[1][ply].equals(move)) {
                 return 8000;
             } else {
-                MoveGenerator.getPieces(move, boards);
-                return historyMoves[MoveGenerator.startPiece][MoveGenerator.targetSquare];
+                int[] cords = MoveGenerator.getPieces(move, boards);
+                return historyMoves[cords[startPiece]][cords[targetSquare]];
             }
         }
 

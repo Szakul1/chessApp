@@ -48,7 +48,7 @@ public class Game {
     private long hashKey;
     private final List<Move> moveHistory = new ArrayList<>();
 
-    public Game(GameFragment gameFragment, char[][] chessBoard, boolean white) {
+    public Game(GameFragment gameFragment, char[][] chessBoard) {
         this.gameFragment = gameFragment;
         this.chessBoard = chessBoard;
         arrayToBitboards();
@@ -113,7 +113,7 @@ public class Game {
     }
 
     public int scoreMove(boolean white) {
-        return engine.scoreMove(boards, castleFlags, white);
+        return engine.findBestMove(boards, castleFlags, white, hashKey);
     }
 
 
@@ -154,7 +154,8 @@ public class Game {
     public Analyze startAnalyze(boolean white, ProgressBar bar) {
         arrayToBitboards();
         Analyze analyze = new Analyze(this, engine);
-        analyze.analyzeGame(moveHistory, boards, castleFlags, white, bar);
+        hashKey = engine.zobrist.generateHashKey(boards, castleFlags, true);
+        analyze.analyzeGame(moveHistory, boards, castleFlags, white, bar, hashKey);
         resetBoard();
         return analyze;
     }

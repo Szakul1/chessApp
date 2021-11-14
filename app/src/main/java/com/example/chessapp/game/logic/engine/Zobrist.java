@@ -9,6 +9,8 @@ import static com.example.chessapp.game.type.BitBoards.WB;
 import static com.example.chessapp.game.type.BitBoards.WN;
 import static com.example.chessapp.game.type.BitBoards.WP;
 import static com.example.chessapp.game.type.BitBoards.WR;
+import static com.example.chessapp.game.type.BitBoards.startPiece;
+import static com.example.chessapp.game.type.BitBoards.targetPiece;
 import static com.example.chessapp.game.type.MoveType.CASTLE;
 import static com.example.chessapp.game.type.MoveType.EN_PASSANT;
 import static com.example.chessapp.game.type.MoveType.PROMOTION;
@@ -33,16 +35,16 @@ public class Zobrist {
     public long hashMove(long hashKey, Move move, long[] boards, boolean[] castleFlags, boolean white) {
         int start = move.startRow * 8 + move.startCol;
         int target = move.endRow * 8 + move.endCol;
-        MoveGenerator.getPieces(move, boards);
+        int[] cords = MoveGenerator.getPieces(move, boards);
         hashKey ^= blackMove; // hash turn
-        hashKey ^= pieceKeys[MoveGenerator.startPiece][start]; // remove from start
+        hashKey ^= pieceKeys[cords[startPiece]][start]; // remove from start
         if (move.type == PROMOTION) {
             hashKey ^= pieceKeys[getPromotion(move.promotionPiece)][target]; // add promotion piece to end
         } else {
-            hashKey ^= pieceKeys[MoveGenerator.startPiece][target]; // add piece to end
+            hashKey ^= pieceKeys[cords[startPiece]][target]; // add piece to end
         }
-        if (MoveGenerator.targetPiece != -1) { // capture
-            hashKey ^= pieceKeys[MoveGenerator.targetPiece][target]; // remove capture from target
+        if (cords[targetPiece] != -1) { // capture
+            hashKey ^= pieceKeys[cords[targetPiece]][target]; // remove capture from target
         }
 
         hashKey = removeEnPassant(hashKey, boards[EP]);

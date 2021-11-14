@@ -55,9 +55,6 @@ public class MoveGenerator {
                     0x8040201008040201L, 0x4020100804020100L, 0x2010080402010000L, 0x1008040201000000L,
                     0x804020100000000L, 0x402010000000000L, 0x201000000000000L, 0x100000000000000L};
 
-    public static int startPiece, targetPiece;
-    public static int startSquare, targetSquare;
-
     /*
         Communication
      */
@@ -137,10 +134,11 @@ public class MoveGenerator {
      * @param move   move
      * @param boards bit boards
      */
-    public static void getPieces(Move move, long[] boards) {
-        startSquare = move.startRow * 8 + move.startCol;
-        targetSquare = move.endRow * 8 + move.endCol;
-        targetPiece = -1;
+    public static int[] getPieces(Move move, long[] boards) {
+        int startSquare = move.startRow * 8 + move.startCol;
+        int targetSquare = move.endRow * 8 + move.endCol;
+        int targetPiece = -1;
+        int startPiece = -1;
         for (int i = 0; i < boards.length - 1; i++) {
             if ((boards[i] & (1L << startSquare)) != 0) {
                 startPiece = i;
@@ -148,6 +146,7 @@ public class MoveGenerator {
                 targetPiece = i;
             }
         }
+        return new int[]{startPiece, targetPiece, startSquare, targetSquare};
     }
 
     /**

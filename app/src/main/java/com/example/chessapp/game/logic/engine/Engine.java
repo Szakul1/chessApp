@@ -1,6 +1,8 @@
 package com.example.chessapp.game.logic.engine;
 
 import static com.example.chessapp.game.type.BitBoards.EP;
+import static com.example.chessapp.game.type.BitBoards.startPiece;
+import static com.example.chessapp.game.type.BitBoards.targetSquare;
 import static com.example.chessapp.game.type.HashFlag.ALPHA;
 import static com.example.chessapp.game.type.HashFlag.BETA;
 import static com.example.chessapp.game.type.HashFlag.EXACT;
@@ -16,8 +18,8 @@ import java.util.Map;
 import java.util.Objects;
 
 public class Engine {
-    private final static int MATE_SCORE = 49000;
-    private final static int INFINITY = 50000;
+    private final static int MATE_SCORE = 49_000;
+    private final static int INFINITY = 50_000;
     private static final int FULL_DEPTH_MOVES = 4;
     private static final int REDUCTION_LIMIT = 3;
     private static final int MAX_PLY = 32;
@@ -43,9 +45,9 @@ public class Engine {
         zobrist = new Zobrist();
     }
 
-    public int scoreMove(long[] boards, boolean[] castleFlags, boolean white) {
+    public int scorePosition(long[] boards, boolean[] castleFlags, boolean white, long hashKey) {
         bestMove = null;
-        return alphaBeta(-INFINITY, INFINITY, globalDepth - 1, boards, castleFlags, white, 0, 0L, true); // TODO change
+        return alphaBeta(-INFINITY, INFINITY, globalDepth - 1, boards, castleFlags, white, 0, hashKey, true);
     }
 
     public int findBestMove(long[] boards, boolean[] castleFlags, boolean white, long hashKey) {
@@ -94,14 +96,18 @@ public class Engine {
 
     private int alphaBeta(int alpha, int beta, int depth, long[] boards, boolean[] castleFlags, boolean white, int ply,
                           long hashKey, boolean possibleNullMove) {
-        int score = 0;
+        int score;
         HashFlag hashFlag = ALPHA;
+        Move bestMove = null;
 
         // check if node is already stored in transposition table
         if (ply != 0 && transpositionTable.containsKey(hashKey)) {
-            Integer value = Objects.requireNonNull(transpositionTable.get(hashKey)).readEntry(alpha, beta, depth, ply);
+            TranspositionTable entry = transpositionTable.get(hashKey);
+            Integer value = Objects.requireNonNull(entry).readEntry(alpha, beta, depth, ply);
             if (value != null) {
                 return value;
+            } else {
+                bestMove = entry.move;
             }
         }
 
@@ -137,9 +143,8 @@ public class Engine {
             enablePvScoring(moves, ply);
 
         long opponentPieces = MoveGenerator.getMyPieces(!white, boards);
-        int[] scores = scoreMoves(moves, boards, opponentPieces, ply);
+        int[] scores = scoreMoves(moves, boards, opponentPieces, ply, bestMove);
 
-        Move bestMove = null;
         for (int i = 0; i < moves.size(); i++) {
             pickMove(i, moves, scores);
             Move move = moves.get(i);
@@ -172,7 +177,7 @@ public class Engine {
                 bestMove = move;
 
                 if (score >= beta) {
-                    transpositionTable.put(hashKey, new TranspositionTable(depth, BETA, beta, ply));
+                    transpositionTable.put(hashKey, new TranspositionTable(depth, BETA, beta, ply, move));
 
                     saveKillerMoves(move, opponentPieces, ply);
                     return beta;
@@ -195,7 +200,7 @@ public class Engine {
                 pvTable[ply][nextPly] = pvTable[ply + 1][nextPly];
         }
 
-        transpositionTable.put(hashKey, new TranspositionTable(depth, hashFlag, alpha, ply));
+        transpositionTable.put(hashKey, new TranspositionTable(depth, hashFlag, alpha, ply, bestMove));
 
         return alpha;
     }
@@ -216,7 +221,7 @@ public class Engine {
         List<Move> moves = MoveGenerator.possibleMoves(white, boards, castleFlags);
 
         long opponentPieces = MoveGenerator.getMyPieces(!white, boards);
-        int[] scores = scoreMoves(moves, boards, opponentPieces, ply);
+        int[] scores = scoreMoves(moves, boards, opponentPieces, ply, null);
 
         for (int i = 0; i < moves.size(); i++) {
             pickMove(i, moves, scores);
@@ -244,8 +249,8 @@ public class Engine {
 
     private void saveHistoryMoves(Move move, long[] boards, long opponentPieces, int depth) {
         if (!MoveGenerator.captureMove(move, opponentPieces)) {
-            MoveGenerator.getPieces(move, boards);
-            rating.historyMoves[MoveGenerator.startPiece][MoveGenerator.targetSquare] += depth;
+            int[] cords = MoveGenerator.getPieces(move, boards);
+            rating.historyMoves[cords[startPiece]][cords[targetSquare]] += depth;
         }
     }
 
@@ -267,12 +272,12 @@ public class Engine {
         }
     }
 
-    private int[] scoreMoves(List<Move> moves, long[] boards, long opponentPieces, int ply) {
+    private int[] scoreMoves(List<Move> moves, long[] boards, long opponentPieces, int ply, Move bestMove) {
         int[] moveScores = new int[moves.size()];
 
         for (int i = 0; i < moves.size(); i++) {
             Move move = moves.get(i);
-            moveScores[i] = scoreMove(move, boards, opponentPieces, ply);
+            moveScores[i] = scorePosition(move, boards, opponentPieces, ply, bestMove);
         }
 
         return moveScores;
@@ -291,7 +296,10 @@ public class Engine {
         swap(moves, scores, start, bestIndex);
     }
 
-    private int scoreMove(Move move, long[] boards, long opponentPieces, int ply) {
+    private int scorePosition(Move move, long[] boards, long opponentPieces, int ply, Move bestMove) {
+        if (move.equals(bestMove)) {
+            return 30_000;
+        }
         if (this.scorePv && move.equals(pvTable[0][ply])) { // pv scoring is enabled
             scorePv = false;
             return 20_000;
