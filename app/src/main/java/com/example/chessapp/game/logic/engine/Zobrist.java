@@ -25,7 +25,7 @@ public class Zobrist {
     private final SecureRandom random;
     private final long[][] pieceKeys = new long[13][64];
     private final long[] castleKeys = new long[4];
-    private long blackMove;
+    private long moveKey;
 
     public Zobrist() {
         random = new SecureRandom();
@@ -36,7 +36,7 @@ public class Zobrist {
         int start = move.startRow * 8 + move.startCol;
         int target = move.endRow * 8 + move.endCol;
         int[] cords = MoveGenerator.getPieces(move, boards);
-        hashKey ^= blackMove; // hash turn
+        hashKey ^= moveKey; // hash turn
         hashKey ^= pieceKeys[cords[startPiece]][start]; // remove from start
         if (move.type == PROMOTION) {
             hashKey ^= pieceKeys[getPromotion(move.promotionPiece)][target]; // add promotion piece to end
@@ -74,7 +74,7 @@ public class Zobrist {
         return hashKey;
     }
 
-    public long generateHashKey(long[] boards, boolean[] castleFlags, boolean white) {
+    public long hashPosition(long[] boards, boolean[] castleFlags, boolean white) {
         long hashKey = 0L;
 
         for (int square = 0; square < 64; square++) {
@@ -92,7 +92,7 @@ public class Zobrist {
         }
 
         if (!white) {
-            hashKey ^= blackMove;
+            hashKey ^= moveKey;
         }
 
         return hashKey;
@@ -107,7 +107,7 @@ public class Zobrist {
     }
 
     public long hashSide(long hashKey) {
-        return hashKey ^ blackMove;
+        return hashKey ^ moveKey;
     }
 
     private void initRandomKeys() {
@@ -121,7 +121,7 @@ public class Zobrist {
             castleKeys[i] = random.nextLong();
         }
 
-        blackMove = random.nextLong();
+        moveKey = random.nextLong();
     }
 
     private int getPromotion(char promotionPiece) {

@@ -1,12 +1,10 @@
 package com.example.chessapp.game.logic.engine;
 
-import static com.example.chessapp.game.type.BitBoards.EP;
 import static com.example.chessapp.game.type.BitBoards.startPiece;
 import static com.example.chessapp.game.type.BitBoards.targetSquare;
 import static com.example.chessapp.game.type.HashFlag.ALPHA;
 import static com.example.chessapp.game.type.HashFlag.BETA;
 import static com.example.chessapp.game.type.HashFlag.EXACT;
-import static com.example.chessapp.game.type.MoveType.PROMOTION;
 
 import com.example.chessapp.game.logic.MoveGenerator;
 import com.example.chessapp.game.type.HashFlag;
@@ -18,16 +16,15 @@ import java.util.Map;
 import java.util.Objects;
 
 public class Engine {
+    public final static int LOWER_MATE = 48_000;
     private final static int MATE_SCORE = 49_000;
     private final static int INFINITY = 50_000;
-    private static final int FULL_DEPTH_MOVES = 4;
-    private static final int REDUCTION_LIMIT = 3;
+
     private static final int MAX_PLY = 32;
 
-    public static int globalDepth = 6;
+    public static int globalDepth = 5;
     private final Rating rating;
     public Move bestMove;
-    public int mate = -1;
 
     // Principal variation
     private Move[][] pvTable; // table of pv
@@ -47,9 +44,19 @@ public class Engine {
 
     public int scorePosition(long[] boards, boolean[] castleFlags, boolean white, long hashKey) {
         bestMove = null;
-        return alphaBeta(-INFINITY, INFINITY, globalDepth - 1, boards, castleFlags, white, 0, hashKey, true);
+        return alphaBeta(-INFINITY, INFINITY, globalDepth - 1, boards, castleFlags, white, 0, hashKey);
     }
 
+
+    /**
+     * Finds best move for given position and scores it
+     * Assigns best move to global variable bestMove
+     * @param boards bitboards
+     * @param castleFlags castle flags
+     * @param white player to move
+     * @param hashKey hash key of position
+     * @return score of position
+     */
     public int findBestMove(long[] boards, boolean[] castleFlags, boolean white, long hashKey) {
         // clearing flags
         rating.killerMoves = new Move[2][MAX_PLY];
@@ -58,7 +65,6 @@ public class Engine {
         followPv = false;
         scorePv = false;
 
-        mate = -1;
         nodes = 0;
         int score = 0;
         int alpha = -INFINITY;
@@ -69,7 +75,7 @@ public class Engine {
         for (currentDepth = 1; currentDepth <= globalDepth; currentDepth++) {
             followPv = true;
 
-            score = alphaBeta(alpha, beta, currentDepth, boards, castleFlags, white, 0, hashKey, true);
+            score = alphaBeta(alpha, beta, currentDepth, boards, castleFlags, white, 0, hashKey);
             if (score <= alpha || score >= beta) {
                 alpha = -INFINITY;
                 beta = INFINITY;
@@ -85,26 +91,40 @@ public class Engine {
         bestMove = pvTable[0][0];
         for (int i = 0; i < globalDepth && pvTable[0][i] != null; i++)
             System.out.println(pvTable[0][i]);
-        if (Math.abs(score) >= MATE_SCORE - globalDepth) {
-            mate = (MATE_SCORE - Math.abs(score)) / 2;
-        }
+
         System.out.println("nodes: " + nodes);
+
         return score;
     }
 
-    int nodes = 0;
+    private int nodes = 0;
 
+    /**
+     * Alpha beta algorithm for finding best move in position
+     * and scoring it
+     * @param alpha alpha param
+     * @param beta beta param
+     * @param depth current depth
+     * @param boards bitboards
+     * @param castleFlags castle flags
+     * @param white player to move
+     * @param ply move counter
+     * @param hashKey hash of current position
+     * @return score of position
+     */
     private int alphaBeta(int alpha, int beta, int depth, long[] boards, boolean[] castleFlags, boolean white, int ply,
-                          long hashKey, boolean possibleNullMove) {
+                          long hashKey) {
         int score;
         HashFlag hashFlag = ALPHA;
         Move bestMove = null;
 
         // check if node is already stored in transposition table
-        if (ply != 0 && transpositionTable.containsKey(hashKey)) {
+        if (transpositionTable.containsKey(hashKey)) {
             TranspositionTable entry = transpositionTable.get(hashKey);
             Integer value = Objects.requireNonNull(entry).readEntry(alpha, beta, depth, ply);
             if (value != null) {
+                if (ply != 0)
+                    pvTable[0][0] = entry.move;
                 return value;
             } else {
                 bestMove = entry.move;
@@ -122,21 +142,6 @@ public class Engine {
         if (!kingSafe)
             depth++;
 
-        // null move
-        if (possibleNullMove && depth >= 4 && kingSafe && ply != 0) {
-            long enPassant = boards[EP]; // preserve en passant
-            boards[EP] = 0L; // reset
-            long newHashKey = zobrist.removeEnPassant(hashKey, boards[EP]);
-            newHashKey = zobrist.hashSide(newHashKey);
-
-            // reduce depth, give one more move
-            score = -alphaBeta(-beta, -beta + 1, depth - 1 - 3, boards, castleFlags, !white, ply + 1, newHashKey, false);
-            boards[EP] = enPassant; // restore
-
-            if (score >= beta)
-                return beta;
-        }
-
         List<Move> moves = MoveGenerator.possibleMoves(white, boards, castleFlags);
 
         if (followPv)
@@ -152,22 +157,7 @@ public class Engine {
             boolean[] nextFlags = MoveGenerator.updateCastling(move, boards, castleFlags);
             long newHashKey = zobrist.hashMove(hashKey, move, boards, castleFlags, white);
 
-            if (i == 0) {
-                score = -alphaBeta(-beta, -alpha, depth - 1, nextBoards, nextFlags, !white, ply + 1, newHashKey, true);
-            } else { // late move reduction
-                if (i >= FULL_DEPTH_MOVES && depth >= REDUCTION_LIMIT && kingSafe &&
-                        !MoveGenerator.captureMove(move, opponentPieces) && move.type != PROMOTION) // conditions for lmr
-                    // reduce depth
-                    score = -alphaBeta(-alpha - 1, -alpha, depth - 2, nextBoards, nextFlags, !white, ply + 1, newHashKey, true);
-                else // make score > alpha true to make full depth search
-                    score = alpha + 1;
-
-                if (score > alpha) {
-                    score = -alphaBeta(-alpha - 1, -alpha, depth - 1, nextBoards, nextFlags, !white, ply + 1, newHashKey, true);
-                    if (score > alpha && score < beta)
-                        score = -alphaBeta(-beta, -alpha, depth - 1, nextBoards, nextFlags, !white, ply + 1, newHashKey, true);
-                }
-            }
+            score = -alphaBeta(-beta, -alpha, depth - 1, nextBoards, nextFlags, !white, ply + 1, newHashKey);
 
             if (score > alpha) {
                 hashFlag = EXACT;
@@ -315,5 +305,14 @@ public class Engine {
         int tempScore = scores[i1];
         scores[i1] = scores[i2];
         scores[i2] = tempScore;
+    }
+
+    public static String isMate(int score) {
+        String result = null;
+        if (score > LOWER_MATE)
+            result = "Mate in " + (MATE_SCORE - score);
+        else if (score < -LOWER_MATE)
+            result = "Mate in " + (MATE_SCORE + score);
+        return result;
     }
 }

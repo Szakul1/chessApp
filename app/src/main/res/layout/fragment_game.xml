@@ -176,13 +176,12 @@
         app:layout_constraintVertical_bias="1">
 
         <Button
-            android:layout_marginHorizontal="5sp"
+            android:layout_marginRight="5sp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:backgroundTint="@color/black"
             android:onClick="showProgress"
             android:text="Hide\nposition"
-            android:layout_weight="1"
             />
 
         <Button
@@ -192,17 +191,15 @@
             android:backgroundTint="@color/black"
             android:onClick="goBack"
             android:text="Menu"
-            android:layout_weight="1"
             />
 
         <Button
+            android:layout_marginLeft="5sp"
             android:id="@+id/main_restart"
-            android:layout_marginHorizontal="5sp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:backgroundTint="@color/black"
             android:text="Restart"
-            android:layout_weight="1"
             />
 
     </LinearLayout>

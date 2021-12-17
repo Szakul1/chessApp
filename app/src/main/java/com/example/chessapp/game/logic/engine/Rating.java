@@ -128,8 +128,9 @@ public class Rating {
         }
 
         // score for attacked squares
-        score += Long.bitCount(MoveGenerator.getAttackedSquares(boards, true));
-        score -= Long.bitCount(MoveGenerator.getAttackedSquares(boards, false));
+        long occupied = MoveGenerator.getOccupied(boards);
+        score += Long.bitCount(MoveGenerator.getAttackedSquares(boards, true, occupied));
+        score -= Long.bitCount(MoveGenerator.getAttackedSquares(boards, false, occupied));
 
         // bishop pair
         if (Long.bitCount(boards[WB]) > 1)

@@ -12,6 +12,7 @@ import android.widget.TextView;
 
 import com.example.chessapp.R;
 import com.example.chessapp.game.logic.engine.Analyze;
+import com.example.chessapp.game.logic.engine.Engine;
 import com.example.chessapp.menu.GameFragment;
 
 public class AnalyzeDesk {
@@ -38,6 +39,8 @@ public class AnalyzeDesk {
 
         forwardButton = view.findViewById(R.id.forwardAnalyze);
         backButton = view.findViewById(R.id.backAnalyze);
+
+        hideAnalyzeDesk();
     }
 
     public void analyze(Analyze analyze) {
@@ -53,7 +56,7 @@ public class AnalyzeDesk {
             if (currentMove == -1) {
                 gameFragment.repaint();
                 hideAnalyze();
-                gameFragment.updateBar(0, -1);
+                gameFragment.updateBar(0);
             } else {
                 updateAnalyze(analyze, currentMove);
             }
@@ -64,26 +67,24 @@ public class AnalyzeDesk {
         gameFragment.repaint();
         bestMove.setText(analyze.bestMoves[currentMove]);
         int score = analyze.bestScores[currentMove];
-        if (score >= 0) {
-            bestScore.setText("+" + score / 100.0);
-            bestScore.setTextColor(Color.BLACK);
-            bestScore.setBackgroundColor(Color.WHITE);
-        } else {
-            bestScore.setText("" + score / 100.0);
-            bestScore.setTextColor(Color.WHITE);
-            bestScore.setBackgroundColor(Color.BLACK);
-        }
+        setProperties(bestScore, score);
+
         actualMove.setText(analyze.moves.get(currentMove).toString());
         score = analyze.moveScores[currentMove];
-        gameFragment.updateBar(score, -1);
+        gameFragment.updateBar(score);
+        setProperties(actualScore, score);
+    }
+
+    private void setProperties(TextView view, int score) {
+        String mate = Engine.isMate(score);
         if (score >= 0) {
-            actualScore.setText("+" + score / 100.0);
-            actualScore.setTextColor(Color.BLACK);
-            actualScore.setBackgroundColor(Color.WHITE);
+            view.setText(mate != null ? mate : "+" + score / 100.0);
+            view.setTextColor(Color.BLACK);
+            view.setBackgroundColor(Color.WHITE);
         } else {
-            actualScore.setText("" + score / 100.0);
-            actualScore.setTextColor(Color.WHITE);
-            actualScore.setBackgroundColor(Color.BLACK);
+            view.setText(mate != null ? mate : "" + score / 100.0);
+            view.setTextColor(Color.WHITE);
+            view.setBackgroundColor(Color.BLACK);
         }
     }
 

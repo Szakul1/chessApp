@@ -42,7 +42,7 @@ public class ZobristTest {
         Zobrist zobrist = new Zobrist();
 
         long[] boards = arrayToBitboards(startingBoard);
-        long hashKey = zobrist.generateHashKey(boards, castleFlags, true);
+        long hashKey = zobrist.hashPosition(boards, castleFlags, true);
 
         Move move1 = new Move(7, 0 , 7, 1, NORMAL);
         Move move2 = new Move(1, 2, 3, 2, NORMAL);
@@ -58,7 +58,7 @@ public class ZobristTest {
         castle = MoveGenerator.updateCastling(move2, boards, castle);
         boards = MoveGenerator.makeMove(move2, boards);
 
-        long endHashKey = zobrist.generateHashKey(boards, castle, true);
+        long endHashKey = zobrist.hashPosition(boards, castle, true);
 
         // then
         assertEquals(endHashKey, hashKey);

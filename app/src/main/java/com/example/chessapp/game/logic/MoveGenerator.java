@@ -31,14 +31,10 @@ import java.util.ListIterator;
 
 public class MoveGenerator {
 
-    private static long notMyPieces;
-    private static long myPieces;
-    private static long occupied;
-    private static long empty;
-    private static final long columnAB = 217020518514230019L;
-    private static final long columnGH = -4557430888798830400L;
-    private static final long KING_SPAN = 460039L;
-    private static final long KNIGHT_SPAN = 43234889994L;
+    private static final long columnAB = 0x303030303030303L;
+    private static final long columnGH = 0xC0C0C0C0C0C0C0C0L;
+    private static final long KING_SPAN = 0x70507L;
+    private static final long KNIGHT_SPAN = 0xA1100110AL;
     private static final long[] CASTLE_ROOKS = {63, 56, 7, 0};
     public static final long[] ROW_MASKS = /* from row1 to row8 */
             {0xFFL, 0xFF00L, 0xFF0000L, 0xFF000000L, 0xFF00000000L, 0xFF0000000000L, 0xFF000000000000L,
@@ -60,19 +56,27 @@ public class MoveGenerator {
      */
 
     public static boolean kingSafe(boolean white, long[] pieces) {
-        return white ? (pieces[WK] & unsafeForWhite(pieces)) == 0 :
-                (pieces[BK] & unsafeForBlack(pieces)) == 0;
+        long occupied = getOccupied(pieces);
+        return white ? (pieces[WK] & unsafeForWhite(pieces, occupied)) == 0 :
+                (pieces[BK] & unsafeForBlack(pieces, occupied)) == 0;
     }
 
+    /**
+     * Returns list of all possible moves in a position
+     * @param white player to move
+     * @param boards bitboards
+     * @param castleFlags castle flags
+     * @return list of moves
+     */
     public static List<Move> possibleMoves(boolean white, long[] boards, boolean[] castleFlags) {
-        List<Move> moves = white ? possibleMovesW(boards, castleFlags[CWK], castleFlags[CWQ]) :
-                possibleMovesB(boards, castleFlags[CBK], castleFlags[CBQ]);
+        long occupied = getOccupied(boards);
+        List<Move> moves = white ? possibleMovesW(boards, castleFlags[CWK], castleFlags[CWQ], occupied) :
+                possibleMovesB(boards, castleFlags[CBK], castleFlags[CBQ], occupied);
         ListIterator<Move> iterator = moves.listIterator();
         while (iterator.hasNext()) {
             Move move = iterator.next();
             long[] nextBoards = makeMove(move, boards);
-            long unsafe = white ? unsafeForWhite(nextBoards) : unsafeForBlack(nextBoards);
-            // checking castle square safe TODO
+            long unsafe = white ? unsafeForWhite(nextBoards, occupied) : unsafeForBlack(nextBoards, occupied);
             if ((unsafe & (white ? nextBoards[WK] : nextBoards[BK])) != 0) {
                 iterator.remove();
             }
@@ -80,6 +84,12 @@ public class MoveGenerator {
         return moves;
     }
 
+    /**
+     * Makes move for every bitboard
+     * @param move move to make
+     * @param pieces bitboards
+     * @return new updated bitboards
+     */
     public static long[] makeMove(Move move, long[] pieces) {
         long tempWR = makeMoveForBoard(pieces[WR], move, 'R');
         long tempBR = makeMoveForBoard(pieces[BR], move, 'r');
@@ -100,23 +110,35 @@ public class MoveGenerator {
         };
     }
 
+    /**
+     * Updates castle flags after move
+     * @param move move to make
+     * @param pieces bitboards
+     * @param castleFlags castle flags to update
+     * @return new updated flags
+     */
     public static boolean[] updateCastling(Move move, long[] pieces, boolean[] castleFlags) {
         boolean[] flags = Arrays.copyOf(castleFlags, castleFlags.length);
-        if (move.type == NORMAL || move.type == CASTLE) {
+        if (move.type != EN_PASSANT) {
             int start = move.startRow * 8 + move.startCol;
+            int end = move.endRow * 8 + move.endCol;
             if (((1L << start) & pieces[WK]) != 0) {
                 flags[CWK] = false;
                 flags[CWQ] = false;
             } else if (((1L << start) & pieces[BK]) != 0) {
                 flags[CBK] = false;
                 flags[CBQ] = false;
-            } else if (((1L << start) & pieces[WR] & (1L << CASTLE_ROOKS[0])) != 0) {
+            }
+            if ((((1L << start) | (1L << end)) & pieces[WR] & (1L << CASTLE_ROOKS[0])) != 0) {
                 flags[CWK] = false;
-            } else if (((1L << start) & pieces[WR] & (1L << CASTLE_ROOKS[1])) != 0) {
+            }
+            if ((((1L << start) | (1L << end)) & pieces[WR] & (1L << CASTLE_ROOKS[1])) != 0) {
                 flags[CWQ] = false;
-            } else if (((1L << start) & pieces[BR] & (1L << CASTLE_ROOKS[2])) != 0) {
+            }
+            if ((((1L << start) | (1L << end)) & pieces[BR] & (1L << CASTLE_ROOKS[2])) != 0) {
                 flags[CBK] = false;
-            } else if (((1L << start) & pieces[BR] & (1L << CASTLE_ROOKS[3])) != 0) {
+            }
+            if ((((1L << start) | (1L << end)) & pieces[BR] & (1L << CASTLE_ROOKS[3])) != 0) {
                 flags[CBQ] = false;
             }
         }
@@ -129,10 +151,11 @@ public class MoveGenerator {
     }
 
     /**
-     * Assigns moving piece to startPiece and target piece to targetPiece
+     * Returns array of startPiece, targetPiece, startSquare, targetSquare
      *
      * @param move   move
      * @param boards bit boards
+     * @return array of startPiece, targetPiece, startSquare, targetSquare
      */
     public static int[] getPieces(Move move, long[] boards) {
         int startSquare = move.startRow * 8 + move.startCol;
@@ -178,7 +201,7 @@ public class MoveGenerator {
         Private methods
      */
 
-    private static long makeMoveForBoard(long board, Move move, char promotionType) {
+    private static long makeMoveForBoard(long board, Move move, char promotionPiece) {
         int start = move.startRow * 8 + move.startCol;
         int end = move.endRow * 8 + move.endCol;
         if (move.type != PROMOTION) {
@@ -189,7 +212,7 @@ public class MoveGenerator {
                 board &= ~(1L << end); // remove from end (capture)
             }
         } else {
-            if (promotionType == move.promotionPiece) { // promoted piece
+            if (promotionPiece == move.promotionPiece) { // promoted piece
                 board |= (1L << end); // add to end
             } else {
                 board &= ~(1L << start); // remove from start
@@ -239,47 +262,45 @@ public class MoveGenerator {
         return moves;
     }
 
-    public static long getAttackedSquares(long[] pieces, boolean white) {
-        return white ? unsafeForBlack(pieces) : unsafeForWhite(pieces);
+    public static long getAttackedSquares(long[] pieces, boolean white, long occupied) {
+        return white ? unsafeForBlack(pieces, occupied) : unsafeForWhite(pieces, occupied);
     }
 
-    private static List<Move> possibleMovesW(long[] pieces, boolean CWK, boolean CWQ) {
-        myPieces = getMyPieces(true, pieces);
-        notMyPieces = ~(myPieces);
-        occupied = getOccupied(pieces);
-        empty = ~occupied;
-        long unSafe = unsafeForWhite(pieces);
+    private static List<Move> possibleMovesW(long[] pieces, boolean CWK, boolean CWQ, long occupied) {
+        long myPieces = getMyPieces(true, pieces);
+        long notMyPieces = ~(myPieces);
+        long empty = ~occupied;
+        long unSafe = unsafeForWhite(pieces, occupied);
         List<Move> moves = new ArrayList<>();
 
-        possibleWP(moves, pieces[WP], pieces[BP], pieces[EP]);
-        possibleN(moves, pieces[WN]);
-        possibleB(moves, pieces[WB]);
-        possibleR(moves, pieces[WR]);
-        possibleQ(moves, pieces[WQ]);
-        possibleK(moves, pieces[WK]);
-        possibleCW(moves, CWK, CWQ, unSafe, pieces[WK], pieces[WR]);
+        possibleWP(moves, pieces[WP], pieces[BP], pieces[EP], notMyPieces, occupied, empty);
+        possibleN(moves, pieces[WN], notMyPieces);
+        possibleB(moves, pieces[WB], notMyPieces, occupied);
+        possibleR(moves, pieces[WR], notMyPieces, occupied);
+        possibleQ(moves, pieces[WQ], notMyPieces, occupied);
+        possibleK(moves, pieces[WK], notMyPieces);
+        possibleCW(moves, CWK, CWQ, unSafe, pieces[WK], occupied);
         return moves;
     }
 
-    private static List<Move> possibleMovesB(long[] pieces, boolean CBK, boolean CBQ) {
-        myPieces = getMyPieces(false, pieces);
-        notMyPieces = ~(myPieces);
-        occupied = getOccupied(pieces);
-        empty = ~occupied;
-        long unSafe = unsafeForBlack(pieces);
+    private static List<Move> possibleMovesB(long[] pieces, boolean CBK, boolean CBQ, long occupied) {
+        long myPieces = getMyPieces(false, pieces);
+        long notMyPieces = ~(myPieces);
+        long empty = ~occupied;
+        long unSafe = unsafeForBlack(pieces, occupied);
         List<Move> moves = new ArrayList<>();
 
-        possibleBP(moves, pieces[BP], pieces[WP], pieces[EP]);
-        possibleN(moves, pieces[BN]);
-        possibleB(moves, pieces[BB]);
-        possibleR(moves, pieces[BR]);
-        possibleQ(moves, pieces[BQ]);
-        possibleK(moves, pieces[BK]);
-        possibleCB(moves, CBK, CBQ, unSafe, pieces[BK], pieces[BR]);
+        possibleBP(moves, pieces[BP], pieces[WP], pieces[EP], notMyPieces, occupied, empty);
+        possibleN(moves, pieces[BN], notMyPieces);
+        possibleB(moves, pieces[BB], notMyPieces, occupied);
+        possibleR(moves, pieces[BR], notMyPieces, occupied);
+        possibleQ(moves, pieces[BQ], notMyPieces, occupied);
+        possibleK(moves, pieces[BK], notMyPieces);
+        possibleCB(moves, CBK, CBQ, unSafe, pieces[BK], occupied);
         return moves;
     }
 
-    private static void possibleWP(List<Move> moveList, long WP, long BP, long EP) {
+    private static void possibleWP(List<Move> moveList, long WP, long BP, long EP, long notMyPieces, long occupied, long empty) {
 
         long pawnMoves = (WP >> 7) & notMyPieces & occupied & ~ROW_MASKS[0] & ~COLUMN_MASKS[0]; // capture right
         addPawnMoves(moveList, pawnMoves, 1, -1);
@@ -321,7 +342,7 @@ public class MoveGenerator {
 
     }
 
-    private static void possibleBP(List<Move> moveList, long BP, long WP, long EP) {
+    private static void possibleBP(List<Move> moveList, long BP, long WP, long EP, long notMyPieces, long occupied, long empty) {
 
         long pawnMoves = (BP << 7) & notMyPieces & occupied & ~ROW_MASKS[7] & ~COLUMN_MASKS[7]; // capture right
         addPawnMoves(moveList, pawnMoves, -1, 1);
@@ -402,8 +423,8 @@ public class MoveGenerator {
      * @param moveList list ot add
      * @param BBoard   bishop bitboard
      */
-    private static void possibleB(List<Move> moveList, long BBoard) {
-        getSlidingMoves(moveList, BBoard, MoveGenerator::diagonalMoves);
+    private static void possibleB(List<Move> moveList, long BBoard, long notMyPieces, long occupied) {
+        getSlidingMoves(moveList, BBoard, MoveGenerator::diagonalMoves, notMyPieces, occupied);
     }
 
     /**
@@ -412,8 +433,8 @@ public class MoveGenerator {
      * @param moveList list ot add
      * @param RBoard   rook bitboard
      */
-    private static void possibleR(List<Move> moveList, long RBoard) {
-        getSlidingMoves(moveList, RBoard, MoveGenerator::straightMoves);
+    private static void possibleR(List<Move> moveList, long RBoard, long notMyPieces, long occupied) {
+        getSlidingMoves(moveList, RBoard, MoveGenerator::straightMoves, notMyPieces, occupied);
     }
 
     /**
@@ -422,8 +443,8 @@ public class MoveGenerator {
      * @param moveList list ot add
      * @param QBoard   queen bitboard
      */
-    private static void possibleQ(List<Move> moveList, long QBoard) {
-        getSlidingMoves(moveList, QBoard, MoveGenerator::getQueenMoves);
+    private static void possibleQ(List<Move> moveList, long QBoard, long notMyPieces, long occupied) {
+        getSlidingMoves(moveList, QBoard, MoveGenerator::getQueenMoves, notMyPieces, occupied);
     }
 
     /**
@@ -432,15 +453,15 @@ public class MoveGenerator {
      * @param position position of queen
      * @return bitboard of moves
      */
-    private static long getQueenMoves(int position) {
-        return straightMoves(position) | diagonalMoves(position);
+    private static long getQueenMoves(int position, long occupied) {
+        return straightMoves(position, occupied) | diagonalMoves(position, occupied);
     }
 
     /**
      * interface for function for getting moves for different pieces
      */
     private interface GetMoves {
-        long getMoves(int location);
+        long getMoves(int location, long occupied);
     }
 
     /**
@@ -450,12 +471,12 @@ public class MoveGenerator {
      * @param board    bitboard of piece
      * @param getMoves function for getting moves for different pieces
      */
-    private static void getSlidingMoves(List<Move> moveList, long board, GetMoves getMoves) {
+    private static void getSlidingMoves(List<Move> moveList, long board, GetMoves getMoves, long notMyPieces, long occupied) {
         long piece = board & -board; // get first piece -b = ~(b-1)
         while (piece != 0) { // until no more pieces
             int location = Long.numberOfTrailingZeros(piece); // location of piece
             // get moves but only for empty squares and captures (not my pieces)
-            long moves = getMoves.getMoves(location) & notMyPieces;
+            long moves = getMoves.getMoves(location, occupied) & notMyPieces;
             addMove(moveList, location, moves); // add moves
             board &= ~piece; // remove pieces from bitboard
             piece = board & -board; // get next piece
@@ -468,13 +489,13 @@ public class MoveGenerator {
      * @param moveList list to add
      * @param KBoard   bitboard of kings
      */
-    private static void possibleK(List<Move> moveList, long KBoard) {
+    private static void possibleK(List<Move> moveList, long KBoard, long notMyPieces) {
         int location = Long.numberOfTrailingZeros(KBoard); // location of king
-        // 9 - location of king with all possible moves at most left bottom position
+        // 9 - location of king with all possible moves at most left top position
         long moves = location > 9 ?
                 KING_SPAN << (location - 9) : // move forward
                 KING_SPAN >> (9 - location); // move back
-        checkArrayOut(moveList, location, moves); // check if move is out of board and add moves
+        checkArrayOut(moveList, location, moves, notMyPieces); // check if move is out of board and add moves
     }
 
     /**
@@ -483,15 +504,15 @@ public class MoveGenerator {
      * @param moveList list to add
      * @param NBoard   bitboard of knights
      */
-    private static void possibleN(List<Move> moveList, long NBoard) {
+    private static void possibleN(List<Move> moveList, long NBoard, long notMyPieces) {
         long knight = NBoard & -NBoard; // get first knight -b = ~(pawnMoves-1)
         while (knight != 0) { // until no more knights
             int location = Long.numberOfTrailingZeros(knight); // location of knight
-            // 18 - location of knight with all possible moves at most left bottom position
+            // 18 - location of knight with all possible moves at most left top position
             long moves = location > 18 ?
                     KNIGHT_SPAN << (location - 18) : // move forward
                     KNIGHT_SPAN >> (18 - location); // move back
-            checkArrayOut(moveList, location, moves); // check if move is out of board and add moves
+            checkArrayOut(moveList, location, moves, notMyPieces); // check if move is out of board and add moves
             NBoard &= ~knight; // remove check knight
             knight = NBoard & -NBoard; // get next knight
         }
@@ -504,7 +525,7 @@ public class MoveGenerator {
      * @param location starting location
      * @param moves    bitboard of moves
      */
-    private static void checkArrayOut(List<Move> moveList, int location, long moves) {
+    private static void checkArrayOut(List<Move> moveList, int location, long moves, long notMyPieces) {
         moves = location % 8 < 4 ?
                 moves & ~columnGH & notMyPieces :
                 moves & ~columnAB & notMyPieces;
@@ -528,7 +549,7 @@ public class MoveGenerator {
         }
     }
 
-    static long straightMoves(int position) {
+    static long straightMoves(int position, long occupied) {
         int row = position / 8, col = position % 8;
         long binaryPiece = 1L << position;
         long movesHorizontal = (occupied - 2 * binaryPiece) ^
@@ -539,7 +560,7 @@ public class MoveGenerator {
         return (movesHorizontal & ROW_MASKS[row]) | (movesVertical & COLUMN_MASKS[col]);
     }
 
-    static long diagonalMoves(int position) {
+    static long diagonalMoves(int position, long occupied) {
         int checkPos = position / 8 + position % 8;
         long binaryPiece = 1L << position;
         long movesDiagonal = ((occupied & DIAGONAL_MASKS[checkPos]) - (2 * binaryPiece)) ^
@@ -563,17 +584,15 @@ public class MoveGenerator {
      * @param castleWQ able to castle white queen
      * @param unsafe   unsafe squares
      * @param king     king bitboard
-     * @param rook     rook bitboard
+     * @param occupied occupied bitboard
      */
-    private static void possibleCW(List<Move> moves, boolean castleWK, boolean castleWQ, long unsafe, long king, long rook) {
+    private static void possibleCW(List<Move> moves, boolean castleWK, boolean castleWQ, long unsafe, long king, long occupied) {
         if ((unsafe & king) == 0) { // not in check
             if (castleWK && // castle king side
-                    (((1L << CASTLE_ROOKS[0]) & rook) != 0) && // rook is in correct place
                     ((occupied | unsafe) & ((1L << 61) | (1L << 62))) == 0) { // squares are empty and safe
                 moves.add(new Move(7, 4, 7, 6, CASTLE, 7, 5));
             }
             if (castleWQ && // castle queen side
-                    (((1L << CASTLE_ROOKS[1]) & rook) != 0) && // rook in correct place
                     // 3 squares must be empty, path for king must be safe
                     ((occupied | (unsafe & ~(1L << 57))) & ((1L << 57) | (1L << 58) | (1L << 59))) == 0) {
                 moves.add(new Move(7, 4, 7, 2, CASTLE, 0, 3));
@@ -590,17 +609,15 @@ public class MoveGenerator {
      * @param castleBQ able to castle black queen
      * @param unsafe   unsafe squares
      * @param king     king bitboard
-     * @param rook     rook bitboard
+     * @param occupied occupied bitboard
      */
-    private static void possibleCB(List<Move> moves, boolean castleBK, boolean castleBQ, long unsafe, long king, long rook) {
+    private static void possibleCB(List<Move> moves, boolean castleBK, boolean castleBQ, long unsafe, long king, long occupied) {
         if ((unsafe & king) == 0) { // not in check
             if (castleBK && // castle king side
-                    (((1L << CASTLE_ROOKS[2]) & rook) != 0) && // rook is in correct place
                     ((occupied | unsafe) & ((1L << 5) | (1L << 6))) == 0) { // squares are empty and safe
                 moves.add(new Move(0, 4, 0, 6, CASTLE, 7, 5));
             }
             if (castleBQ && // castle queen side
-                    (((1L << CASTLE_ROOKS[3]) & rook) != 0) && // rook is in correct place
                     // 3 squares must be empty, path for king must be safe
                     ((occupied | (unsafe & ~(1L << 1))) & ((1L << 1) | (1L << 2) | (1L << 3))) == 0) {
                 moves.add(new Move(0, 4, 0, 2, CASTLE, 0, 3));
@@ -614,13 +631,13 @@ public class MoveGenerator {
      * @param pieces pieces
      * @return unsafe squares bitboard
      */
-    public static long unsafeForBlack(long[] pieces) {
+    private static long unsafeForBlack(long[] pieces, long occupied) {
         // pawn
         long unsafe = (pieces[WP] >> 7) & ~COLUMN_MASKS[0]; // left
         unsafe |= (pieces[WP] >> 9) & ~COLUMN_MASKS[7]; // right
 
         // rest
-        unsafe |= isSafe(pieces, -6);
+        unsafe |= isSafe(pieces, -6, occupied);
         return unsafe;
     }
 
@@ -630,13 +647,13 @@ public class MoveGenerator {
      * @param pieces pieces
      * @return unsafe squares bitboard
      */
-    private static long unsafeForWhite(long[] pieces) {
+    private static long unsafeForWhite(long[] pieces, long occupied) {
         // pawn
         long unsafe = (pieces[BP] << 7) & ~COLUMN_MASKS[7]; // left
         unsafe |= (pieces[BP] << 9) & ~COLUMN_MASKS[0]; // right
 
         // rest
-        unsafe |= isSafe(pieces, 0);
+        unsafe |= isSafe(pieces, 0, occupied);
         return unsafe;
     }
 
@@ -647,7 +664,7 @@ public class MoveGenerator {
      * @param offset 0 - for white, -6 for black to get pieces from array
      * @return attacked pieces bitboard
      */
-    private static long isSafe(long[] pieces, int offset) {
+    private static long isSafe(long[] pieces, int offset, long occupied) {
         occupied = getOccupied(pieces); // for diagonal and straight moves
         long unsafe = 0L;
         // knight
@@ -666,7 +683,7 @@ public class MoveGenerator {
         long bishopQueen = QB & -QB;
         while (bishopQueen != 0) {
             int location = Long.numberOfTrailingZeros(bishopQueen);
-            long moves = diagonalMoves(location);
+            long moves = diagonalMoves(location, occupied);
             unsafe |= moves;
             QB &= ~bishopQueen;
             bishopQueen = QB & -QB;
@@ -676,7 +693,7 @@ public class MoveGenerator {
         long rookQueen = QR & -QR;
         while (rookQueen != 0) {
             int location = Long.numberOfTrailingZeros(rookQueen);
-            long moves = straightMoves(location);
+            long moves = straightMoves(location, occupied);
             unsafe |= moves;
             QR &= ~rookQueen;
             rookQueen = QR & -QR;

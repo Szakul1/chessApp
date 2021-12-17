@@ -53,10 +53,14 @@ public class Game {
         this.chessBoard = chessBoard;
         arrayToBitboards();
         engine = new Engine();
-        hashKey = engine.zobrist.generateHashKey(boards, castleFlags, true);
+        hashKey = engine.zobrist.hashPosition(boards, castleFlags, true);
     }
 
-    public void makeRealMove(Move move) {
+    /**
+     * Makes move
+     * @param move move to make
+     */
+    public void makeMove(Move move) {
         hashKey = engine.zobrist.hashMove(hashKey, move, boards, castleFlags, gameFragment.whiteTurn);
         boolean capture = capture(move.endRow, move.endCol); // for sound playing
         castleFlags = MoveGenerator.updateCastling(move, boards, castleFlags);
@@ -66,6 +70,15 @@ public class Game {
         gameFragment.playSound(capture);
     }
 
+    /**
+     * Makes move if is possible
+     * @param startRow starting row
+     * @param startCol starting column
+     * @param endRow target row
+     * @param endCol target column
+     * @param white player to move
+     * @return true if move is possible
+     */
     public boolean checkMoveAndMake(int startRow, int startCol, int endRow, int endCol, boolean white) {
         List<Move> possibleMoves = possibleMoves(white);
         for (Move move : possibleMoves) {
@@ -74,13 +87,17 @@ public class Game {
                     gameFragment.showPromotionDialog(move);
                     return false;
                 }
-                makeRealMove(move);
+                makeMove(move);
                 return true;
             }
         }
         return false;
     }
 
+    /**
+     * Makes response after move
+     * @param white player to move
+     */
     public void response(boolean white) {
         int score = engine.findBestMove(boards, castleFlags, white, hashKey);
         score = white ? score : -score;
@@ -88,17 +105,23 @@ public class Game {
 
         boolean isMove = move != null;
         if (isMove) {
-            makeRealMove(move);
+            makeMove(move);
         }
         finishGame(isMove, white);
-        gameFragment.updateBar(score, engine.mate);
+        gameFragment.updateBar(score);
     }
 
-
-    public List<Move> possibleMoves(boolean white) {
+    private List<Move> possibleMoves(boolean white) {
         return MoveGenerator.possibleMoves(white, boards, castleFlags);
     }
 
+    /**
+     * Returns possible move for the piece
+     * @param row row of piece
+     * @param col column of column
+     * @param white player to move
+     * @return list of moves for the piece
+     */
     public List<Move> getMovesForPiece(int row, int col, boolean white) {
         List<Move> moves = possibleMoves(white);
         ListIterator<Move> iterator = moves.listIterator();
@@ -154,7 +177,7 @@ public class Game {
     public Analyze startAnalyze(boolean white, ProgressBar bar) {
         arrayToBitboards();
         Analyze analyze = new Analyze(this, engine);
-        hashKey = engine.zobrist.generateHashKey(boards, castleFlags, true);
+        hashKey = engine.zobrist.hashPosition(boards, castleFlags, true);
         analyze.analyzeGame(moveHistory, boards, castleFlags, white, bar, hashKey);
         resetBoard();
         return analyze;
@@ -174,6 +197,10 @@ public class Game {
         return chessBoard[row][col] != ' ';
     }
 
+    /**
+     * Checks if game is finished
+     * @param white player to move
+     */
     public void gameFinished(boolean white) {
         List<Move> moves = possibleMoves(white);
         finishGame(!moves.isEmpty(), white);

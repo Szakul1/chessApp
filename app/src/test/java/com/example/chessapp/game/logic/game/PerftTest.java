@@ -50,6 +50,7 @@ public class PerftTest {
     public void startingPositionDepth2() {
         // given
         perfCounter = 0;
+        // convert char array to bit board
         long[] boards = arrayToBitboards(startingBoard);
         boolean[] castleFlags = {true, true, true, true};
 

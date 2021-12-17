@@ -26,6 +26,7 @@ import com.example.chessapp.game.gui.Board;
 import com.example.chessapp.game.gui.DialogManager;
 import com.example.chessapp.game.logic.Game;
 import com.example.chessapp.game.logic.engine.Analyze;
+import com.example.chessapp.game.logic.engine.Engine;
 import com.example.chessapp.game.type.Move;
 
 import java.util.ArrayList;
@@ -46,7 +47,7 @@ public class GameFragment extends Fragment {
     private Board board;
     private Game game;
     private AnalyzeDesk analyzeDesk;
-    private ProgressBar progressBar;
+    private ProgressBar progressBar; // position score indicator
     private TextView progressText;
     private ConstraintLayout.LayoutParams params;
     private DialogManager dialogManager;
@@ -111,6 +112,7 @@ public class GameFragment extends Fragment {
         game = new Game(this, chessBoard);
         analyzeDesk = new AnalyzeDesk(this, requireView());
         dialogManager = new DialogManager(this, requireActivity());
+        updateBar(0);
         if (!color) {
             game.response(true);
         }
@@ -145,16 +147,17 @@ public class GameFragment extends Fragment {
     }
 
     public void makeMove(Move move) {
-        game.makeRealMove(move);
+        game.makeMove(move);
         updateGame();
     }
 
     @SuppressLint("SetTextI18n")
-    public void updateBar(int value, int mate) {
-        if (mate == -1) {
+    public void updateBar(int value) {
+        String mate = Engine.isMate(value);
+        if (mate == null) {
             progressText.setText("" + value / 100.0);
         } else {
-            progressText.setText("Mate in " + mate);
+            progressText.setText(mate);
         }
         ObjectAnimator.ofInt(progressBar, "progress", (value + progressBar.getMax()) / 2)
                 .setDuration(600)
@@ -163,6 +166,7 @@ public class GameFragment extends Fragment {
 
     public void startAnalyze(Dialog endDialog, ProgressBar progressBar) {
         analyzing = true;
+        updateBar(0);
         setBoardBias(0.0f);
         new Thread(() -> {
             Analyze analyze = game.startAnalyze(true, progressBar);
@@ -247,7 +251,7 @@ public class GameFragment extends Fragment {
             whiteTurn = !whiteTurn;
             new Thread(() -> {
                 int score = game.scoreMove(whiteTurn);
-                requireActivity().runOnUiThread(() -> updateBar(whiteTurn ? score : -score, -1));
+                requireActivity().runOnUiThread(() -> updateBar(whiteTurn ? score : -score));
             }).start();
         } else {
             game.response(!whiteTurn);
