@@ -6,7 +6,7 @@ Allows to play with friend (offline), bot and simple game analysis.
 
 ## 1. Features
 
-Playing with other play (same device) or against bot as white or black.
+Playing with other player (same device) or against bot as white or black.
 
 <p align="center">
     <img src="https://user-images.githubusercontent.com/56487624/204372151-3577704d-9638-4a1b-85bc-18d821a54e9a.png" width="200">
