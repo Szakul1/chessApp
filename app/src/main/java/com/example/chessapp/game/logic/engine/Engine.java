@@ -69,7 +69,7 @@ public class Engine {
         int score = 0;
         int alpha = -INFINITY;
         int beta = INFINITY;
-        long start = System.currentTimeMillis();
+//        long start = System.currentTimeMillis();
 
         // iterative deepening
         for (currentDepth = 1; currentDepth <= globalDepth; currentDepth++) {
@@ -86,13 +86,13 @@ public class Engine {
             beta = score + 50;
         }
 
-        long end = System.currentTimeMillis();
+//        long end = System.currentTimeMillis();
 //        System.out.println("time: " + (end - start));
         bestMove = pvTable[0][0];
-        for (int i = 0; i < globalDepth && pvTable[0][i] != null; i++)
-            System.out.println(pvTable[0][i]);
-
-        System.out.println("nodes: " + nodes);
+//        for (int i = 0; i < globalDepth && pvTable[0][i] != null; i++)
+//            System.out.println(pvTable[0][i]);
+//
+//        System.out.println("nodes: " + nodes);
 
         return score;
     }
@@ -123,7 +123,7 @@ public class Engine {
             TranspositionTable entry = transpositionTable.get(hashKey);
             Integer value = Objects.requireNonNull(entry).readEntry(alpha, beta, depth, ply);
             if (value != null) {
-                if (ply != 0)
+                if (ply == 0)
                     pvTable[0][0] = entry.move;
                 return value;
             } else {
@@ -314,5 +314,13 @@ public class Engine {
         else if (score < -LOWER_MATE)
             result = "Mate in " + (MATE_SCORE + score);
         return result;
+    }
+
+    public static int adjustMateForAnalyze(int score) {
+        if (score > LOWER_MATE)
+            return score + 1;
+        else if (score < -LOWER_MATE)
+            return score - 1;
+        return score;
     }
 }

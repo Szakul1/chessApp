@@ -43,6 +43,10 @@ public class AnalyzeDesk {
         hideAnalyzeDesk();
     }
 
+    /**
+     * Sets buttons for navigation in analyze
+     * @param analyze class with data for analyzing
+     */
     public void analyze(Analyze analyze) {
         forwardButton.setOnClickListener(view -> {
             int currentMove = analyze.moveForward();
@@ -92,6 +96,9 @@ public class AnalyzeDesk {
         analyzeDesk.setVisibility(GONE);
     }
 
+    /**
+     * Shows analyze desk
+     */
     public void showAnalyzeDesk() {
         analyzeDesk.setVisibility(VISIBLE);
         hideAnalyze();

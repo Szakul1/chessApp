@@ -1,13 +1,11 @@
 package com.example.chessapp.game.logic.engine;
 
-import android.util.Log;
 import android.widget.ProgressBar;
 
+import com.example.chessapp.game.logic.Game;
 import com.example.chessapp.game.logic.MoveGenerator;
 import com.example.chessapp.game.type.Move;
-import com.example.chessapp.game.logic.Game;
 
-import java.util.Arrays;
 import java.util.List;
 
 public class Analyze {
@@ -38,7 +36,8 @@ public class Analyze {
             int score = engine.findBestMove(boards, castleFlags, white, hashKey);
             score = white ? score : -score;
             bestMoves[i] = engine.bestMove.toString();
-            bestScores[i] = score;
+            bestScores[i] = Engine.adjustMateForAnalyze(score);
+
             hashKey = engine.zobrist.hashMove(hashKey, move, boards, castleFlags, white);
             castleFlags = MoveGenerator.updateCastling(move, boards, castleFlags);
             boards = MoveGenerator.makeMove(move, boards);
@@ -49,8 +48,8 @@ public class Analyze {
             moveScores[i] = score;
             bar.setProgress(i);
         }
-        Log.d("test", "best: " + Arrays.toString(bestScores));
-        Log.d("test", "actual: " + Arrays.toString(moveScores));
+//        Log.d("test", "best: " + Arrays.toString(bestScores));
+//        Log.d("test", "actual: " + Arrays.toString(moveScores));
     }
 
     public int moveForward() {
